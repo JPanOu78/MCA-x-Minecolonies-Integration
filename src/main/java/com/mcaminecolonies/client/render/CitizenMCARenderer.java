@@ -122,12 +122,30 @@ public class CitizenMCARenderer {
         float limbSwingAmount = entity.walkAnimation.speed(partialTicks);
         float ageInTicks = entity.tickCount + partialTicks;
 
-        // Arm swing & poses for held items, placing, breaking, and working animations
+        // Resolve Job and Guard status
+        String jobName = "none";
+        boolean isGuard = false;
+        try {
+            ICitizenData citizenData = entity.getCitizenData();
+            if (citizenData != null) {
+                IJob<?> job = citizenData.getJob();
+                if (job != null && job.getJobRegistryEntry() != null && job.getJobRegistryEntry().getKey() != null) {
+                    jobName = job.getJobRegistryEntry().getKey().getPath();
+                    String lowerJob = jobName.toLowerCase();
+                    isGuard = lowerJob.contains("guard") || lowerJob.contains("knight") || lowerJob.contains("archer")
+                            || lowerJob.contains("ranger") || lowerJob.contains("druid") || lowerJob.contains("mage")
+                            || lowerJob.contains("combat") || lowerJob.contains("patrol");
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        // Arm swing & poses: guards only swing when attacking, other workers swing when working
         float swingProgress = entity.getAttackAnim(partialTicks);
         if (swingProgress == 0.0F && entity.swinging) {
             swingProgress = 0.5F;
         }
-        if (swingProgress == 0.0F && entity.getRenderMetadata() != null && entity.getRenderMetadata().contains("working")) {
+        if (!isGuard && swingProgress == 0.0F && entity.getRenderMetadata() != null && entity.getRenderMetadata().contains("working")) {
             float workSwing = (float) Math.sin((entity.tickCount + partialTicks) * 0.4F);
             if (workSwing > 0.0F) {
                 swingProgress = workSwing;
@@ -145,37 +163,43 @@ public class CitizenMCARenderer {
         model.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
         model.applyAgeProportions(ageState);
 
-        // 1. Render Base Human Skin Layer
+        // 1. Render Base Human Skin Layer (Body and limbs; hide outer clothing layers)
+        model.setAllVisible(true);
+        model.hat.visible = false;
+        model.jacket.visible = false;
+        model.leftSleeve.visible = false;
+        model.rightSleeve.visible = false;
+        model.leftPants.visible = false;
+        model.rightPants.visible = false;
         ResourceLocation skinTexture = appearance.getBaseSkinTexture();
         VertexConsumer skinConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(skinTexture));
         model.renderToBuffer(poseStack, skinConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
 
-        // 2. Render Face / Expression Layer
+        // 2. Render Face / Expression Layer (Head only)
+        model.setAllVisible(false);
+        model.head.visible = true;
         ResourceLocation faceTexture = appearance.getFaceTexture();
         VertexConsumer faceConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(faceTexture));
         model.renderToBuffer(poseStack, faceConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
 
-        // 3. Render Hair Layer with Hair Color Tinting
+        // 3. Render Hair Layer with Hair Color Tinting (Head and Hat only)
+        model.setAllVisible(false);
+        model.head.visible = true;
+        model.hat.visible = true;
         ResourceLocation hairTexture = appearance.getHairTexture();
         VertexConsumer hairConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(hairTexture));
         model.renderToBuffer(poseStack, hairConsumer, packedLight, OverlayTexture.NO_OVERLAY, appearance.getHairColor());
 
-        // 4. Render Job/Clothing Layer
-        String jobName = "none";
-        try {
-            ICitizenData citizenData = entity.getCitizenData();
-            if (citizenData != null) {
-                IJob<?> job = citizenData.getJob();
-                if (job != null && job.getJobRegistryEntry() != null && job.getJobRegistryEntry().getKey() != null) {
-                    jobName = job.getJobRegistryEntry().getKey().getPath();
-                }
-            }
-        } catch (Exception ignored) {
-        }
-
+        // 4. Render Job/Clothing Layer (Body, limbs, and outer clothing; hide head/hat)
+        model.setAllVisible(true);
+        model.head.visible = false;
+        model.hat.visible = false;
         ResourceLocation clothingTexture = appearance.getClothingTexture(jobName);
         VertexConsumer clothingConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(clothingTexture));
         model.renderToBuffer(poseStack, clothingConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+
+        // Reset all parts visible for armor and held items
+        model.setAllVisible(true);
 
         // 5. Render Citizen Armor Layer (Helmet, Chestplate, Leggings, Boots)
         if (armorLayer != null) {

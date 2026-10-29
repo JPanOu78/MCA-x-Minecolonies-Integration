@@ -127,7 +127,7 @@ public class CitizenAppearance {
             return "shepherd";
         } else if (lower.contains("courier") || lower.contains("delivery")) {
             return "cartographer";
-        } else if (lower.contains("cleric") || lower.contains("priest") || lower.contains("enchant") || lower.contains("healer") || lower.contains("alchemist") || lower.contains("druid")) {
+        } else if (lower.contains("cleric") || lower.contains("priest") || lower.contains("enchant") || lower.contains("healer") || lower.contains("alchemist") || lower.contains("druid") || lower.contains("mage") || lower.contains("wizard") || lower.contains("spell") || lower.contains("magic") || lower.contains("sorcerer") || lower.contains("warlock")) {
             return "cleric";
         } else if (lower.contains("under") || lower.contains("grave") || lower.contains("tomb") || lower.contains("cult")) {
             return "cultist";

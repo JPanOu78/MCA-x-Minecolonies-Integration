@@ -1,15 +1,17 @@
 package com.mcaminecolonies.event;
 
 import com.mcaminecolonies.client.appearance.CitizenAgeState;
-import com.mcaminecolonies.client.gui.CitizenCustomizationScreen;
+import com.mcaminecolonies.client.gui.CitizenClientScreens;
 import com.mcaminecolonies.data.CitizenMCAData;
 import com.mcaminecolonies.data.CitizenMCAManager;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
-import net.minecraft.client.Minecraft;
+import net.conczin.mca.entity.ai.relationship.RelationshipState;
+import net.conczin.mca.server.world.data.PlayerSaveData;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -25,7 +27,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 /**
- * Handles customizing citizens using MCA items, dyes, scissors/combs, potions, and growth food.
+ * Handles customizing citizens using MCA items (Villager Editor, Dressing Mirror, Family Tree,
+ * Engagement/Wedding Rings, Divorce Papers, Dyes, Comb, Needle, Potions, and Growth Food).
  */
 @EventBusSubscriber(modid = "mcaminecolonies")
 public class CitizenInteractionHandler {
@@ -41,12 +44,120 @@ public class CitizenInteractionHandler {
         if (held.isEmpty()) return;
 
         Item item = held.getItem();
-        String itemId = BuiltInRegistries.ITEM.getKey(item).toString();
+        String itemId = BuiltInRegistries.ITEM.getKey(item).toString().toLowerCase();
 
         CitizenMCAData data = CitizenMCAManager.getData(citizen);
         boolean modified = false;
 
-        // 1. Dye Items -> Change Hair Color
+        // 1. Villager Editor -> Open Full MCA Villager Editor GUI
+        if (itemId.contains("villager_editor")) {
+            if (event.getLevel().isClientSide()) {
+                CitizenClientScreens.openVillagerEditor(citizen, player);
+            }
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
+            return;
+        }
+
+        // 2. Dressing Mirror -> Open MCA Limited Villager Editor GUI (appearance only)
+        if (itemId.contains("mirror")) {
+            if (event.getLevel().isClientSide()) {
+                CitizenClientScreens.openLimitedEditor(citizen, player);
+            }
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
+            return;
+        }
+
+        // 3. Family Tree -> Open MCA Family Tree GUI
+        if (itemId.contains("family_tree") || itemId.contains("book_family")) {
+            if (event.getLevel().isClientSide()) {
+                CitizenClientScreens.openFamilyTree(citizen);
+            }
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
+            return;
+        }
+
+        // 4. Engagement Ring -> Propose to Citizen
+        if (itemId.contains("engagement_ring")) {
+            if (!event.getLevel().isClientSide() && player instanceof ServerPlayer serverPlayer) {
+                PlayerSaveData playerData = PlayerSaveData.get(serverPlayer);
+                if (citizen.isBaby() || !data.getAgeState(citizen.isBaby()).isAdult()) {
+                    serverPlayer.displayClientMessage(Component.translatable("interaction.engage.fail.child"), true);
+                } else if (playerData.isMarried()) {
+                    serverPlayer.displayClientMessage(Component.translatable("interaction.engage.fail.married"), true);
+                } else if (playerData.isEngagedWith(citizen.getUUID())) {
+                    serverPlayer.displayClientMessage(Component.translatable("interaction.engage.fail.engaged"), true);
+                } else if (data.getHearts() < 50) {
+                    serverPlayer.displayClientMessage(Component.translatable("interaction.engage.fail.hearts"), true);
+                } else {
+                    playerData.engage(citizen);
+                    data.addHearts(20);
+                    CitizenMCAManager.saveData(citizen, data);
+                    playEffect(citizen, SoundEvents.PLAYER_LEVELUP, ParticleTypes.HEART);
+                    serverPlayer.displayClientMessage(Component.translatable("interaction.engage.success"), true);
+                    if (!player.isCreative()) {
+                        held.shrink(1);
+                    }
+                }
+            }
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
+            return;
+        }
+
+        // 5. Wedding Ring -> Marry Citizen
+        if (itemId.contains("wedding_ring")) {
+            if (!event.getLevel().isClientSide() && player instanceof ServerPlayer serverPlayer) {
+                PlayerSaveData playerData = PlayerSaveData.get(serverPlayer);
+                if (citizen.isBaby() || !data.getAgeState(citizen.isBaby()).isAdult()) {
+                    serverPlayer.displayClientMessage(Component.translatable("interaction.marry.fail.child"), true);
+                } else if (playerData.isMarriedTo(citizen.getUUID())) {
+                    serverPlayer.displayClientMessage(Component.literal("§eYou are already married to " + citizen.getDisplayName().getString() + "!"), true);
+                } else if (playerData.isMarried()) {
+                    serverPlayer.displayClientMessage(Component.translatable("interaction.marry.fail.married"), true);
+                } else if (!playerData.isEngagedWith(citizen.getUUID()) && data.getHearts() < 80) {
+                    serverPlayer.displayClientMessage(Component.translatable("interaction.marry.fail.hearts"), true);
+                } else {
+                    playerData.marry(citizen);
+                    data.setHearts(100);
+                    CitizenMCAManager.saveData(citizen, data);
+                    playEffect(citizen, SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, ParticleTypes.HEART);
+                    serverPlayer.displayClientMessage(Component.translatable("interaction.marry.success"), true);
+                    if (!player.isCreative()) {
+                        held.shrink(1);
+                    }
+                }
+            }
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
+            return;
+        }
+
+        // 6. Divorce Papers -> End Marriage/Engagement
+        if (itemId.contains("divorce_papers") || itemId.contains("divorce")) {
+            if (!event.getLevel().isClientSide() && player instanceof ServerPlayer serverPlayer) {
+                PlayerSaveData playerData = PlayerSaveData.get(serverPlayer);
+                if (playerData.isMarriedTo(citizen.getUUID()) || playerData.isEngagedWith(citizen.getUUID())) {
+                    playerData.endRelationShip(RelationshipState.SINGLE);
+                    data.setHearts(Math.max(0, data.getHearts() - 50));
+                    CitizenMCAManager.saveData(citizen, data);
+                    playEffect(citizen, SoundEvents.VILLAGER_NO, ParticleTypes.SMOKE);
+                    serverPlayer.displayClientMessage(Component.literal("§cYou are now divorced from " + citizen.getDisplayName().getString() + "."), true);
+                    if (!player.isCreative()) {
+                        held.shrink(1);
+                    }
+                } else {
+                    serverPlayer.displayClientMessage(Component.literal("§eYou are not married to " + citizen.getDisplayName().getString() + "."), true);
+                }
+            }
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
+            return;
+        }
+
+        // 7. Dye Items -> Change Hair Color
         if (item instanceof DyeItem dyeItem) {
             int color = getDyeRgb(dyeItem.getDyeColor());
             data.setHairColor(color);
@@ -60,7 +171,7 @@ public class CitizenInteractionHandler {
             playEffect(citizen, SoundEvents.DYE_USE, ParticleTypes.GLOW);
             player.displayClientMessage(Component.translatable("message.mcaminecolonies.hair_dyed"), true);
         }
-        // 2. Comb / Shears -> Cycle Hairstyle
+        // 8. Comb / Shears -> Cycle Hairstyle
         else if (itemId.contains("comb") || item == Items.SHEARS) {
             data.setHairIndex(data.getHairIndex() + 1);
             data.setCustomized(true);
@@ -69,7 +180,7 @@ public class CitizenInteractionHandler {
             playEffect(citizen, SoundEvents.SHEEP_SHEAR, ParticleTypes.CRIT);
             player.displayClientMessage(Component.literal("Hairstyle: #" + (data.getHairIndex() + 1)), true);
         }
-        // 3. Needle & Thread -> Cycle Clothing
+        // 9. Needle & Thread -> Cycle Clothing
         else if (itemId.contains("needle") || itemId.contains("sewing")) {
             data.setClothingIndex(data.getClothingIndex() + 1);
             data.setCustomized(true);
@@ -78,7 +189,7 @@ public class CitizenInteractionHandler {
             playEffect(citizen, SoundEvents.ARMOR_EQUIP_LEATHER.value(), ParticleTypes.HAPPY_VILLAGER);
             player.displayClientMessage(Component.literal("Clothing Outfit: #" + (data.getClothingIndex() + 1)), true);
         }
-        // 4. Potion of Femininity -> Set Female
+        // 10. Potion of Femininity -> Set Female
         else if (itemId.contains("potion_of_femininity") || itemId.contains("feminine")) {
             citizen.setFemale(true);
             data.setFemale(true);
@@ -93,7 +204,7 @@ public class CitizenInteractionHandler {
             playEffect(citizen, SoundEvents.BREWING_STAND_BREW, ParticleTypes.HEART);
             player.displayClientMessage(Component.translatable("message.mcaminecolonies.gender_female"), true);
         }
-        // 5. Potion of Masculinity -> Set Male
+        // 11. Potion of Masculinity -> Set Male
         else if (itemId.contains("potion_of_masculinity") || itemId.contains("masculine")) {
             citizen.setFemale(false);
             data.setFemale(false);
@@ -108,8 +219,8 @@ public class CitizenInteractionHandler {
             playEffect(citizen, SoundEvents.BREWING_STAND_BREW, ParticleTypes.HEART);
             player.displayClientMessage(Component.translatable("message.mcaminecolonies.gender_male"), true);
         }
-        // 6. Food for growth (Golden Apple, Cake, Apple, Cookie) when citizen is not an adult
-        else if (!data.getAgeState(citizen.isBaby()).isAdult() && (
+        // 12. Food for growth (Golden Apple, Cake, Apple, Cookie) when citizen is a child
+        else if (citizen.isBaby() && (
                 item == Items.GOLDEN_APPLE || item == Items.ENCHANTED_GOLDEN_APPLE ||
                 item == Items.CAKE || item == Items.APPLE || item == Items.COOKIE || itemId.contains("baby_food")
         )) {
@@ -131,15 +242,6 @@ public class CitizenInteractionHandler {
                 CitizenAgeState newState = data.getAgeState(citizen.isBaby());
                 player.displayClientMessage(Component.literal("§eGrowth accelerated! Current stage: " + newState.getDisplayName()), true);
             }
-        }
-        // 7. Villager Editor / Dressing Mirror -> Open Customization Screen
-        else if (itemId.contains("editor") || itemId.contains("mirror")) {
-            if (event.getLevel().isClientSide()) {
-                Minecraft.getInstance().setScreen(new CitizenCustomizationScreen(citizen));
-            }
-            event.setCanceled(true);
-            event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
-            return;
         }
 
         if (modified) {
@@ -180,4 +282,3 @@ public class CitizenInteractionHandler {
         };
     }
 }
-

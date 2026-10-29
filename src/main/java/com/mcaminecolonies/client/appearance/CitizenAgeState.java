@@ -55,7 +55,7 @@ public enum CitizenAgeState {
     }
 
     public static CitizenAgeState fromAge(int age, boolean isMinecoloniesChild) {
-        if (!isMinecoloniesChild && age >= ADULT.minAge) {
+        if (!isMinecoloniesChild) {
             return ADULT;
         }
         if (age < TODDLER.minAge) {
@@ -64,10 +64,9 @@ public enum CitizenAgeState {
             return TODDLER;
         } else if (age < TEEN.minAge) {
             return CHILD;
-        } else if (age < ADULT.minAge || isMinecoloniesChild) {
+        } else {
             return TEEN;
         }
-        return ADULT;
     }
 }
 
