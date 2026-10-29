@@ -20,3 +20,4 @@ public class MCAMinecolonies {
         LOGGER.info("MCA x Minecolonies setup complete - Citizen visual override active.");
     }
 }
+

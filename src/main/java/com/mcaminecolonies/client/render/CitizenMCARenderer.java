@@ -4,7 +4,7 @@ import com.mcaminecolonies.client.appearance.CitizenAppearance;
 import com.mcaminecolonies.client.model.CitizenMCAModel;
 import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.jobs.IJob;
-import com.minecolonies.core.entity.citizen.AbstractEntityCitizen;
+import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
@@ -12,7 +12,6 @@ import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 
@@ -74,10 +73,10 @@ public class CitizenMCARenderer {
         VertexConsumer skinConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(skinTexture));
         model.renderToBuffer(poseStack, skinConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
 
-        // 2. Render Eyes Layer
-        ResourceLocation eyesTexture = appearance.getEyesTexture();
-        VertexConsumer eyesConsumer = buffer.getBuffer(RenderType.entityDecal(eyesTexture));
-        model.renderToBuffer(poseStack, eyesConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+        // 2. Render Face / Expression Layer
+        ResourceLocation faceTexture = appearance.getFaceTexture();
+        VertexConsumer faceConsumer = buffer.getBuffer(RenderType.entityDecal(faceTexture));
+        model.renderToBuffer(poseStack, faceConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
 
         // 3. Render Hair Layer
         ResourceLocation hairTexture = appearance.getHairTexture();
@@ -90,8 +89,8 @@ public class CitizenMCARenderer {
             ICitizenData citizenData = entity.getCitizenData();
             if (citizenData != null) {
                 IJob<?> job = citizenData.getJob();
-                if (job != null && job.getName() != null) {
-                    jobName = job.getName();
+                if (job != null && job.getJobRegistryEntry() != null && job.getJobRegistryEntry().getKey() != null) {
+                    jobName = job.getJobRegistryEntry().getKey().getPath();
                 }
             }
         } catch (Exception ignored) {

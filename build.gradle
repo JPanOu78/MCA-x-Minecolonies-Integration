@@ -63,17 +63,16 @@ repositories {
 }
 
 dependencies {
-    // MineColonies dependencies
-    compileOnly "com.ldtteam:minecolonies:1.21.1-1.1.1406-RELEASE:api"
-    compileOnly "com.ldtteam:minecolonies:1.21.1-1.1.1406-RELEASE"
-    compileOnly "com.ldtteam:structurize:1.21.1-1.0.765-RELEASE"
-    compileOnly "com.ldtteam:blockui:1.21.1-1.0.199-RELEASE"
+    // MineColonies and Core dependencies via CurseMaven
+    compileOnly "curse.maven:minecolonies-245506:9058295"
+    compileOnly "curse.maven:structurize-298744:9017852"
+    compileOnly "curse.maven:blockui-522992:8883780"
 
-    // MCA Reborn dependencies (Architectury & MCA)
-    compileOnly "maven.modrinth:minecraft-comes-alive-reborn:7.6.6+1.21.1-neoforge"
-    compileOnly "maven.modrinth:architectury-api:13.0.8+neoforge"
+    // MCA Reborn NeoForge dependency
+    compileOnly "curse.maven:minecraft-comes-alive-reborn-535291:7278618"
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
+
