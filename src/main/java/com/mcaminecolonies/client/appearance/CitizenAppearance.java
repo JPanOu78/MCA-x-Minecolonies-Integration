@@ -103,35 +103,39 @@ public class CitizenAppearance {
         if (job == null) return "none";
         String lower = job.toLowerCase();
 
-        if (lower.contains("farm") || lower.contains("lumber") || lower.contains("forester") || lower.contains("plant")) {
+        if (lower.contains("farm") || lower.contains("lumber") || lower.contains("forester") || lower.contains("plant") || lower.contains("florist") || lower.contains("bee") || lower.contains("compost")) {
             return "farmer";
         } else if (lower.contains("fish")) {
             return "fisherman";
-        } else if (lower.contains("miner") || lower.contains("stone") || lower.contains("mason")) {
+        } else if (lower.contains("miner") || lower.contains("quarry") || lower.contains("nether")) {
             return "miner";
-        } else if (lower.contains("blacksmith") || lower.contains("weaponsmith")) {
+        } else if (lower.contains("blacksmith") || lower.contains("weapon")) {
             return "weaponsmith";
-        } else if (lower.contains("knight") || lower.contains("guard") || lower.contains("patrol")) {
+        } else if (lower.contains("knight") || lower.contains("guard") || lower.contains("patrol") || lower.contains("combat") || lower.contains("shield")) {
             return "guard";
-        } else if (lower.contains("archer")) {
+        } else if (lower.contains("archer") || lower.contains("ranger") || lower.contains("bow")) {
             return "archer";
-        } else if (lower.contains("smelt") || lower.contains("tool")) {
+        } else if (lower.contains("smelt") || lower.contains("tool") || lower.contains("carpenter") || lower.contains("sawmill") || lower.contains("mechan") || lower.contains("builder") || lower.contains("crafter")) {
             return "toolsmith";
+        } else if (lower.contains("stone") || lower.contains("mason") || lower.contains("concrete") || lower.contains("brick")) {
+            return "mason";
         } else if (lower.contains("armor")) {
             return "armorer";
         } else if (lower.contains("fletch")) {
             return "fletcher";
-        } else if (lower.contains("shepherd") || lower.contains("cow") || lower.contains("swine") || lower.contains("chicken") || lower.contains("rabbit")) {
+        } else if (lower.contains("shepherd") || lower.contains("cow") || lower.contains("swine") || lower.contains("pig") || lower.contains("chicken") || lower.contains("rabbit") || lower.contains("animal") || lower.contains("herd")) {
             return "shepherd";
         } else if (lower.contains("courier") || lower.contains("delivery")) {
             return "cartographer";
-        } else if (lower.contains("cleric") || lower.contains("priest") || lower.contains("enchant") || lower.contains("healer")) {
+        } else if (lower.contains("cleric") || lower.contains("priest") || lower.contains("enchant") || lower.contains("healer") || lower.contains("alchemist") || lower.contains("druid")) {
             return "cleric";
-        } else if (lower.contains("library") || lower.contains("school") || lower.contains("teacher") || lower.contains("university") || lower.contains("student")) {
+        } else if (lower.contains("under") || lower.contains("grave") || lower.contains("tomb") || lower.contains("cult")) {
+            return "cultist";
+        } else if (lower.contains("library") || lower.contains("school") || lower.contains("teacher") || lower.contains("university") || lower.contains("student") || lower.contains("book")) {
             return "librarian";
-        } else if (lower.contains("baker") || lower.contains("cook")) {
+        } else if (lower.contains("baker") || lower.contains("cook") || lower.contains("chef") || lower.contains("tavern") || lower.contains("kitchen")) {
             return "baker";
-        } else if (lower.contains("leather")) {
+        } else if (lower.contains("leather") || lower.contains("tanner") || lower.contains("dye") || lower.contains("glass")) {
             return "leatherworker";
         }
         return "none";
