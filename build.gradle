@@ -1,0 +1,79 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.78'
+}
+
+tasks.named('wrapper', Wrapper) {
+    distributionType = Wrapper.DistributionType.BIN
+}
+
+version = project.mod_version
+group = project.mod_group_id
+
+base {
+    archivesName = project.mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neo_version
+
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+    }
+
+    mods {
+        "${project.mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        name = 'NeoForged'
+        url = 'https://maven.neoforged.net/releases'
+    }
+    maven {
+        name = 'LDTTeam'
+        url = 'https://ldtteam.jfrog.io/ldtteam/modding'
+    }
+    maven {
+        name = 'Modrinth'
+        url = 'https://api.modrinth.com/maven'
+    }
+    maven {
+        name = 'CurseMaven'
+        url = 'https://cursemaven.com'
+        content {
+            includeGroup 'curse.maven'
+        }
+    }
+}
+
+dependencies {
+    // MineColonies dependencies
+    compileOnly "com.ldtteam:minecolonies:1.21.1-1.1.1406-RELEASE:api"
+    compileOnly "com.ldtteam:minecolonies:1.21.1-1.1.1406-RELEASE"
+    compileOnly "com.ldtteam:structurize:1.21.1-1.0.765-RELEASE"
+    compileOnly "com.ldtteam:blockui:1.21.1-1.0.199-RELEASE"
+
+    // MCA Reborn dependencies (Architectury & MCA)
+    compileOnly "maven.modrinth:minecraft-comes-alive-reborn:7.6.6+1.21.1-neoforge"
+    compileOnly "maven.modrinth:architectury-api:13.0.8+neoforge"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
