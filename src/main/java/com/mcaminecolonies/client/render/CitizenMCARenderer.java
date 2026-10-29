@@ -6,35 +6,78 @@ import com.mcaminecolonies.client.model.CitizenMCAModel;
 import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.jobs.IJob;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
+import com.minecolonies.core.client.render.CitizenArmorLayer;
+import com.minecolonies.core.client.render.RenderUtils;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.RenderLayerParent;
+import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
 
 /**
  * Handles rendering MineColonies Citizens with MCA-styled humanoid models, textures, layers,
- * and growth scaling.
+ * armor, held items, growth scaling, and arm swing animations.
  */
 public class CitizenMCARenderer {
 
     private static CitizenMCAModel defaultModel;
     private static CitizenMCAModel slimModel;
 
+    private static CitizenArmorLayer<AbstractEntityCitizen, CitizenMCAModel, HumanoidModel<AbstractEntityCitizen>> defaultArmorLayer;
+    private static CitizenArmorLayer<AbstractEntityCitizen, CitizenMCAModel, HumanoidModel<AbstractEntityCitizen>> slimArmorLayer;
+
+    private static ItemInHandLayer<AbstractEntityCitizen, CitizenMCAModel> defaultItemLayer;
+    private static ItemInHandLayer<AbstractEntityCitizen, CitizenMCAModel> slimItemLayer;
+
     public static synchronized void ensureModelsInitialized() {
         if (defaultModel == null) {
             EntityModelSet modelSet = Minecraft.getInstance().getEntityModels();
-            if (modelSet != null) {
+            ModelManager modelManager = Minecraft.getInstance().getModelManager();
+            ItemInHandRenderer itemInHandRenderer = Minecraft.getInstance().getEntityRenderDispatcher().getItemInHandRenderer();
+
+            if (modelSet != null && modelManager != null && itemInHandRenderer != null) {
                 defaultModel = new CitizenMCAModel(modelSet.bakeLayer(ModelLayers.PLAYER), false);
                 slimModel = new CitizenMCAModel(modelSet.bakeLayer(ModelLayers.PLAYER_SLIM), true);
+
+                HumanoidModel<AbstractEntityCitizen> innerModel = new HumanoidModel<>(modelSet.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR));
+                HumanoidModel<AbstractEntityCitizen> outerModel = new HumanoidModel<>(modelSet.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR));
+
+                RenderLayerParent<AbstractEntityCitizen, CitizenMCAModel> defaultParent = createParent(defaultModel);
+                RenderLayerParent<AbstractEntityCitizen, CitizenMCAModel> slimParent = createParent(slimModel);
+
+                defaultArmorLayer = new CitizenArmorLayer<>(defaultParent, innerModel, outerModel, modelManager, modelSet);
+                slimArmorLayer = new CitizenArmorLayer<>(slimParent, innerModel, outerModel, modelManager, modelSet);
+
+                defaultItemLayer = new ItemInHandLayer<>(defaultParent, itemInHandRenderer);
+                slimItemLayer = new ItemInHandLayer<>(slimParent, itemInHandRenderer);
             }
         }
+    }
+
+    private static RenderLayerParent<AbstractEntityCitizen, CitizenMCAModel> createParent(CitizenMCAModel model) {
+        return new RenderLayerParent<>() {
+            @Override
+            public CitizenMCAModel getModel() {
+                return model;
+            }
+
+            @Override
+            public ResourceLocation getTextureLocation(AbstractEntityCitizen entity) {
+                return CitizenAppearance.getAppearance(entity).getBaseSkinTexture();
+            }
+        };
     }
 
     public static boolean renderCitizen(
@@ -52,6 +95,10 @@ public class CitizenMCARenderer {
 
         CitizenAppearance appearance = CitizenAppearance.getAppearance(entity);
         CitizenMCAModel model = appearance.isSlimModel() ? slimModel : defaultModel;
+        CitizenArmorLayer<AbstractEntityCitizen, CitizenMCAModel, HumanoidModel<AbstractEntityCitizen>> armorLayer =
+                appearance.isSlimModel() ? slimArmorLayer : defaultArmorLayer;
+        ItemInHandLayer<AbstractEntityCitizen, CitizenMCAModel> itemLayer =
+                appearance.isSlimModel() ? slimItemLayer : defaultItemLayer;
         CitizenAgeState ageState = appearance.getAgeState();
 
         poseStack.pushPose();
@@ -74,6 +121,25 @@ public class CitizenMCARenderer {
         float limbSwing = entity.walkAnimation.position(partialTicks);
         float limbSwingAmount = entity.walkAnimation.speed(partialTicks);
         float ageInTicks = entity.tickCount + partialTicks;
+
+        // Arm swing & poses for held items, placing, breaking, and working animations
+        float swingProgress = entity.getAttackAnim(partialTicks);
+        if (swingProgress == 0.0F && entity.swinging) {
+            swingProgress = 0.5F;
+        }
+        if (swingProgress == 0.0F && entity.getRenderMetadata() != null && entity.getRenderMetadata().contains("working")) {
+            float workSwing = (float) Math.sin((entity.tickCount + partialTicks) * 0.4F);
+            if (workSwing > 0.0F) {
+                swingProgress = workSwing;
+            }
+        }
+
+        model.attackTime = swingProgress;
+        model.crouching = entity.isCrouching();
+        model.riding = entity.isPassenger();
+        model.swimAmount = entity.getSwimAmount(partialTicks);
+        model.rightArmPose = RenderUtils.getArmPose(entity, InteractionHand.MAIN_HAND);
+        model.leftArmPose = RenderUtils.getArmPose(entity, InteractionHand.OFF_HAND);
 
         model.prepareMobModel(entity, limbSwing, limbSwingAmount, partialTicks);
         model.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
@@ -110,6 +176,16 @@ public class CitizenMCARenderer {
         ResourceLocation clothingTexture = appearance.getClothingTexture(jobName);
         VertexConsumer clothingConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(clothingTexture));
         model.renderToBuffer(poseStack, clothingConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+
+        // 5. Render Citizen Armor Layer (Helmet, Chestplate, Leggings, Boots)
+        if (armorLayer != null) {
+            armorLayer.render(poseStack, buffer, packedLight, entity, limbSwing, limbSwingAmount, partialTicks, ageInTicks, netHeadYaw, headPitch);
+        }
+
+        // 6. Render Held Items Layer (Main hand & Offhand items/blocks/tools)
+        if (itemLayer != null) {
+            itemLayer.render(poseStack, buffer, packedLight, entity, limbSwing, limbSwingAmount, partialTicks, ageInTicks, netHeadYaw, headPitch);
+        }
 
         poseStack.popPose();
         return true;
