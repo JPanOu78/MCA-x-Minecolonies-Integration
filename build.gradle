@@ -72,6 +72,20 @@ dependencies {
     compileOnly "curse.maven:minecraft-comes-alive-reborn-535291:7278618"
 }
 
+tasks.named('jar', Jar) {
+    manifest {
+        attributes([
+            'Specification-Title'     : project.mod_id,
+            'Specification-Vendor'    : project.mod_authors,
+            'Specification-Version'   : '1',
+            'Implementation-Title'    : project.mod_name,
+            'Implementation-Version'  : project.mod_version,
+            'Implementation-Vendor'   : project.mod_authors,
+            'MixinConfigs'            : 'mcaminecolonies.mixins.json'
+        ])
+    }
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }

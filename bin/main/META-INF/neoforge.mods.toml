@@ -11,6 +11,9 @@ Replaces Minecolonies Citizen 3D models with MCA (Minecraft Comes Alive) Reborn 
 '''
 authors="mrzero784"
 
+[[mixins]]
+config="mcaminecolonies.mixins.json"
+
 [[dependencies.mcaminecolonies]]
 modId="neoforge"
 type="required"

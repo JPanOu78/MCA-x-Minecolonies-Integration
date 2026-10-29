@@ -8,10 +8,10 @@ import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 
@@ -23,10 +23,13 @@ public class CitizenMCARenderer {
     private static CitizenMCAModel defaultModel;
     private static CitizenMCAModel slimModel;
 
-    public static void init(EntityRendererProvider.Context context) {
+    public static synchronized void ensureModelsInitialized() {
         if (defaultModel == null) {
-            defaultModel = new CitizenMCAModel(context.bakeLayer(ModelLayers.PLAYER), false);
-            slimModel = new CitizenMCAModel(context.bakeLayer(ModelLayers.PLAYER_SLIM), true);
+            EntityModelSet modelSet = Minecraft.getInstance().getEntityModels();
+            if (modelSet != null) {
+                defaultModel = new CitizenMCAModel(modelSet.bakeLayer(ModelLayers.PLAYER), false);
+                slimModel = new CitizenMCAModel(modelSet.bakeLayer(ModelLayers.PLAYER_SLIM), true);
+            }
         }
     }
 
@@ -38,17 +41,9 @@ public class CitizenMCARenderer {
             MultiBufferSource buffer,
             int packedLight
     ) {
-        if (defaultModel == null) {
-            EntityRendererProvider.Context ctx = new EntityRendererProvider.Context(
-                    Minecraft.getInstance().getEntityRenderDispatcher(),
-                    Minecraft.getInstance().getItemRenderer(),
-                    Minecraft.getInstance().getBlockRenderer(),
-                    Minecraft.getInstance().getEntityRenderDispatcher().getItemInHandRenderer(),
-                    Minecraft.getInstance().getResourceManager(),
-                    Minecraft.getInstance().getEntityModels(),
-                    Minecraft.getInstance().font
-            );
-            init(ctx);
+        ensureModelsInitialized();
+        if (defaultModel == null || slimModel == null) {
+            return false;
         }
 
         CitizenAppearance appearance = CitizenAppearance.getAppearance(entity);

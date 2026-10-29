@@ -17,7 +17,7 @@ public class CitizenRendererMixin {
         method = "render(Lcom/minecolonies/api/entity/citizen/AbstractEntityCitizen;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
         at = @At("HEAD"),
         cancellable = true,
-        remap = true
+        remap = false
     )
     private void mcaminecolonies$overrideCitizenRender(
         AbstractEntityCitizen entity,
