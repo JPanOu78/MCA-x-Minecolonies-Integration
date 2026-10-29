@@ -1,0 +1,8 @@
+{
+  "mod.mcaminecolonies.name": "MCA x MineColonies Integration",
+  "chat.mcaminecolonies.grown_up": "%s ได้เติบโตเป็นผู้ใหญ่แล้ว!",
+  "message.mcaminecolonies.hair_dyed": "ย้อมสีผมเรียบร้อยแล้ว!",
+  "message.mcaminecolonies.gender_female": "เปลี่ยนเพศเป็นเพศหญิงเรียบร้อยแล้ว",
+  "message.mcaminecolonies.gender_male": "เปลี่ยนเพศเป็นเพศชายเรียบร้อยแล้ว",
+  "gui.mcaminecolonies.talk_button": "พูดคุยกับประชาชน (MCA)"
+}

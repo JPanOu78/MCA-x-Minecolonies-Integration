@@ -1,5 +1,6 @@
 package com.mcaminecolonies.client.model;
 
+import com.mcaminecolonies.client.appearance.CitizenAgeState;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
@@ -11,6 +12,19 @@ public class CitizenMCAModel extends PlayerModel<AbstractEntityCitizen> {
 
     public CitizenMCAModel(ModelPart root, boolean slim) {
         super(root, slim);
+    }
+
+    public void applyAgeProportions(CitizenAgeState ageState) {
+        // Suppress default AgeableListModel deformations so we can control uniform proportions
+        this.young = false;
+
+        float headScale = ageState.getHeadScale();
+        this.head.xScale = headScale;
+        this.head.yScale = headScale;
+        this.head.zScale = headScale;
+        this.hat.xScale = headScale;
+        this.hat.yScale = headScale;
+        this.hat.zScale = headScale;
     }
 
     @Override

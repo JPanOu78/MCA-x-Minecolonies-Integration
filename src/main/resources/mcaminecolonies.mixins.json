@@ -5,10 +5,15 @@
   "compatibilityLevel": "JAVA_21",
   "refmap": "mcaminecolonies.refmap.json",
   "client": [
-    "client.CitizenRendererMixin"
+    "client.CitizenRendererMixin",
+    "client.AbstractWindowCitizenMixin"
+  ],
+  "mixins": [
+    "entity.AbstractEntityCitizenMixin",
+    "entity.EntityCitizenMixin",
+    "colony.ReproductionManagerMixin"
   ],
   "injectors": {
     "defaultRequire": 1
   }
 }
-

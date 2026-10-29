@@ -1,5 +1,6 @@
 package com.mcaminecolonies.client.render;
 
+import com.mcaminecolonies.client.appearance.CitizenAgeState;
 import com.mcaminecolonies.client.appearance.CitizenAppearance;
 import com.mcaminecolonies.client.model.CitizenMCAModel;
 import com.minecolonies.api.colony.ICitizenData;
@@ -18,7 +19,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 
 /**
- * Handles rendering MineColonies Citizens with MCA-styled humanoid models, textures, and layers.
+ * Handles rendering MineColonies Citizens with MCA-styled humanoid models, textures, layers,
+ * and growth scaling.
  */
 public class CitizenMCARenderer {
 
@@ -50,6 +52,7 @@ public class CitizenMCARenderer {
 
         CitizenAppearance appearance = CitizenAppearance.getAppearance(entity);
         CitizenMCAModel model = appearance.isSlimModel() ? slimModel : defaultModel;
+        CitizenAgeState ageState = appearance.getAgeState();
 
         poseStack.pushPose();
 
@@ -57,9 +60,10 @@ public class CitizenMCARenderer {
         float bodyRot = Mth.rotLerp(partialTicks, entity.yBodyRotO, entity.yBodyRot);
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - bodyRot));
 
-        // 2. Invert Y-axis and shift down to ground level (Minecraft biped model standard)
+        // 2. Invert Y-axis, scale by MCA growth stage, and shift down to ground level
         poseStack.scale(-1.0F, -1.0F, 1.0F);
-        poseStack.scale(0.9375F, 0.9375F, 0.9375F);
+        float scale = 0.9375F * ageState.getBodyScale();
+        poseStack.scale(scale, scale, scale);
         poseStack.translate(0.0F, -1.501F, 0.0F);
 
         // 3. Compute relative head yaw and pitch
@@ -73,6 +77,7 @@ public class CitizenMCARenderer {
 
         model.prepareMobModel(entity, limbSwing, limbSwingAmount, partialTicks);
         model.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
+        model.applyAgeProportions(ageState);
 
         // 1. Render Base Human Skin Layer
         ResourceLocation skinTexture = appearance.getBaseSkinTexture();
@@ -84,13 +89,13 @@ public class CitizenMCARenderer {
         VertexConsumer faceConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(faceTexture));
         model.renderToBuffer(poseStack, faceConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
 
-        // 3. Render Hair Layer
+        // 3. Render Hair Layer with Hair Color Tinting
         ResourceLocation hairTexture = appearance.getHairTexture();
         VertexConsumer hairConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(hairTexture));
-        model.renderToBuffer(poseStack, hairConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+        model.renderToBuffer(poseStack, hairConsumer, packedLight, OverlayTexture.NO_OVERLAY, appearance.getHairColor());
 
         // 4. Render Job/Clothing Layer
-        String jobName = "citizen";
+        String jobName = "none";
         try {
             ICitizenData citizenData = entity.getCitizenData();
             if (citizenData != null) {

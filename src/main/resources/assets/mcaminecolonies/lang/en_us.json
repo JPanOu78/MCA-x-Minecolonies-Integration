@@ -1,0 +1,8 @@
+{
+  "mod.mcaminecolonies.name": "MCA x MineColonies Integration",
+  "chat.mcaminecolonies.grown_up": "%s has grown up into an adult citizen!",
+  "message.mcaminecolonies.hair_dyed": "Hair dye applied! Citizen hair color updated.",
+  "message.mcaminecolonies.gender_female": "Citizen gender changed to Female.",
+  "message.mcaminecolonies.gender_male": "Citizen gender changed to Male.",
+  "gui.mcaminecolonies.talk_button": "Talk with Citizen (MCA)"
+}
