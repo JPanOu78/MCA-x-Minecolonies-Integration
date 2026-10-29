@@ -3,27 +3,23 @@ package com.mcaminecolonies.mixin.client;
 import com.ldtteam.blockui.controls.ButtonImage;
 import com.mcaminecolonies.client.gui.CitizenDialogueScreen;
 import com.minecolonies.api.colony.ICitizenDataView;
-import com.minecolonies.core.client.gui.AbstractWindowSkeleton;
 import com.minecolonies.core.client.gui.citizen.AbstractWindowCitizen;
+import com.minecolonies.core.client.gui.citizen.MainWindowCitizen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Injects an MCA Dialogue button at the top-right corner of MineColonies citizen GUI windows.
+ * Injects an MCA Dialogue button at the top-right corner of MineColonies MainWindowCitizen GUI.
  */
-@Mixin(value = AbstractWindowCitizen.class, remap = false)
-public abstract class AbstractWindowCitizenMixin extends AbstractWindowSkeleton {
+@Mixin(value = MainWindowCitizen.class, remap = false)
+public abstract class MainWindowCitizenMixin extends AbstractWindowCitizen {
 
-    @Shadow
-    protected ICitizenDataView citizen;
-
-    public AbstractWindowCitizenMixin(ResourceLocation resourceLocation) {
-        super(resourceLocation);
+    public MainWindowCitizenMixin(ICitizenDataView citizen, ResourceLocation xml) {
+        super(citizen, xml);
     }
 
     @Inject(method = "onOpened", at = @At("TAIL"))
@@ -42,3 +38,4 @@ public abstract class AbstractWindowCitizenMixin extends AbstractWindowSkeleton 
         addChild(talkButton);
     }
 }
+

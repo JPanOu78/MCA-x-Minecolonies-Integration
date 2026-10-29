@@ -242,3 +242,4 @@ public class CitizenDialogueScreen extends Screen {
         return false;
     }
 }
+

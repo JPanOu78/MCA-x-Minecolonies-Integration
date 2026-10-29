@@ -70,3 +70,4 @@ public enum CitizenAgeState {
         return ADULT;
     }
 }
+

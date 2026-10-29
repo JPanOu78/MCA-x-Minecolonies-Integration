@@ -154,3 +154,4 @@ public class CitizenCustomizationScreen extends Screen {
         return false;
     }
 }
+

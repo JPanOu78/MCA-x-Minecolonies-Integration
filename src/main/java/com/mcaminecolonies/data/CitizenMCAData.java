@@ -198,3 +198,4 @@ public class CitizenMCAData {
         return CitizenAgeState.fromAge(this.age, isMinecoloniesChild);
     }
 }
+

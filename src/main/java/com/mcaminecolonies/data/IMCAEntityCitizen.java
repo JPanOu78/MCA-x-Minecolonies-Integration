@@ -10,3 +10,4 @@ public interface IMCAEntityCitizen {
     void mcaminecolonies$setMCAData(CompoundTag tag);
     boolean mcaminecolonies$hasMCAData();
 }
+

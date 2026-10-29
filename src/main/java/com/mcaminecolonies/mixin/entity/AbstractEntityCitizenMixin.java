@@ -56,3 +56,4 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
         return tag != null && !tag.isEmpty();
     }
 }
+
