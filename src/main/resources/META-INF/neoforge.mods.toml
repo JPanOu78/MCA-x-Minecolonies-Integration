@@ -28,7 +28,14 @@ side="BOTH"
 [[dependencies.mcaminecolonies]]
 modId="minecolonies"
 type="required"
-versionRange="[1.21.1,)"
+versionRange=""
 ordering="AFTER"
 side="BOTH"
+
+[[dependencies.mcaminecolonies]]
+modId="mca"
+type="optional"
+versionRange=""
+ordering="NONE"
+side="CLIENT"
 
