@@ -7,6 +7,7 @@ import com.minecolonies.api.colony.jobs.IJob;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -14,6 +15,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 
 /**
  * Handles rendering MineColonies Citizens with MCA-styled humanoid models, textures, and layers.
@@ -51,26 +53,35 @@ public class CitizenMCARenderer {
 
         poseStack.pushPose();
 
-        // Standard living entity scale
+        // 1. Orient body rotation matching Minecraft LivingEntity standard
+        float bodyRot = Mth.rotLerp(partialTicks, entity.yBodyRotO, entity.yBodyRot);
+        poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - bodyRot));
+
+        // 2. Invert Y-axis and shift down to ground level (Minecraft biped model standard)
+        poseStack.scale(-1.0F, -1.0F, 1.0F);
         poseStack.scale(0.9375F, 0.9375F, 0.9375F);
+        poseStack.translate(0.0F, -1.501F, 0.0F);
+
+        // 3. Compute relative head yaw and pitch
+        float headRot = Mth.rotLerp(partialTicks, entity.yHeadRotO, entity.yHeadRot);
+        float netHeadYaw = headRot - bodyRot;
+        float headPitch = Mth.rotLerp(partialTicks, entity.xRotO, entity.getXRot());
 
         float limbSwing = entity.walkAnimation.position(partialTicks);
         float limbSwingAmount = entity.walkAnimation.speed(partialTicks);
         float ageInTicks = entity.tickCount + partialTicks;
-        float netHeadYaw = entity.getViewYRot(partialTicks) - entity.yBodyRot;
-        float headPitch = entity.getViewXRot(partialTicks);
 
         model.prepareMobModel(entity, limbSwing, limbSwingAmount, partialTicks);
         model.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
 
-        // 1. Render Base Human Skin
+        // 1. Render Base Human Skin Layer
         ResourceLocation skinTexture = appearance.getBaseSkinTexture();
         VertexConsumer skinConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(skinTexture));
         model.renderToBuffer(poseStack, skinConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
 
         // 2. Render Face / Expression Layer
         ResourceLocation faceTexture = appearance.getFaceTexture();
-        VertexConsumer faceConsumer = buffer.getBuffer(RenderType.entityDecal(faceTexture));
+        VertexConsumer faceConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(faceTexture));
         model.renderToBuffer(poseStack, faceConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
 
         // 3. Render Hair Layer

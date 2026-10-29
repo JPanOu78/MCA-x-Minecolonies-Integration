@@ -6,7 +6,7 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.UUID;
 
 /**
- * Maps MineColonies Citizens to exact MCA Reborn visual texture assets
+ * Maps MineColonies Citizens to bundled MCA Reborn visual texture assets
  * (skin, face, hair, and clothing layers) deterministically via Citizen UUID and gender.
  */
 public class CitizenAppearance {
@@ -28,14 +28,14 @@ public class CitizenAppearance {
         int seed1 = (int) Math.abs(lsb % 1000000007L);
         int seed2 = (int) Math.abs(msb % 1000000009L);
 
-        // MCA provides 5 base skins (0 to 4)
+        // 5 base skins (0 to 4)
         this.skinIndex = seed1 % 5;
-        // MCA provides ~22 facial expressions (0 to 21)
+        // 22 facial expressions (0 to 21)
         this.faceIndex = seed2 % 22;
-        // MCA provides ~30 hairstyles
-        this.hairIndex = (seed1 / 7) % 30;
-        // MCA clothing variants per job
-        this.clothingIndex = (seed2 / 11) % 3;
+        // 40 hairstyles (0 to 39)
+        this.hairIndex = (seed1 / 7) % 40;
+        // clothing variants per job (0 to 1)
+        this.clothingIndex = (seed2 / 11) % 2;
     }
 
     public static CitizenAppearance getAppearance(AbstractEntityCitizen citizen) {
@@ -58,8 +58,8 @@ public class CitizenAppearance {
     public ResourceLocation getBaseSkinTexture() {
         String genderDir = isFemale ? "female" : "male";
         return ResourceLocation.fromNamespaceAndPath(
-            "mca",
-            "skins/skin/" + genderDir + "/" + skinIndex + ".png"
+            "mcaminecolonies",
+            "textures/entity/citizen/skin/" + genderDir + "/" + skinIndex + ".png"
         );
     }
 
@@ -69,8 +69,8 @@ public class CitizenAppearance {
     public ResourceLocation getFaceTexture() {
         String genderDir = isFemale ? "female" : "male";
         return ResourceLocation.fromNamespaceAndPath(
-            "mca",
-            "skins/face/normal/" + genderDir + "/" + faceIndex + ".png"
+            "mcaminecolonies",
+            "textures/entity/citizen/face/normal/" + genderDir + "/" + faceIndex + ".png"
         );
     }
 
@@ -80,8 +80,8 @@ public class CitizenAppearance {
     public ResourceLocation getHairTexture() {
         String genderDir = isFemale ? "female" : "male";
         return ResourceLocation.fromNamespaceAndPath(
-            "mca",
-            "skins/hair/" + genderDir + "/" + hairIndex + ".png"
+            "mcaminecolonies",
+            "textures/entity/citizen/hair/" + genderDir + "/" + hairIndex + ".png"
         );
     }
 
@@ -91,8 +91,8 @@ public class CitizenAppearance {
     public ResourceLocation getClothingTexture(String minecoloniesJob) {
         String mcaJob = mapMinecoloniesJobToMCA(minecoloniesJob);
         return ResourceLocation.fromNamespaceAndPath(
-            "mca",
-            "skins/clothing/normal/neutral/" + mcaJob + "/" + clothingIndex + ".png"
+            "mcaminecolonies",
+            "textures/entity/citizen/clothing/normal/neutral/" + mcaJob + "/" + clothingIndex + ".png"
         );
     }
 
@@ -100,23 +100,27 @@ public class CitizenAppearance {
         if (job == null) return "none";
         String lower = job.toLowerCase();
 
-        if (lower.contains("farm") || lower.contains("lumber") || lower.contains("forester")) {
+        if (lower.contains("farm") || lower.contains("lumber") || lower.contains("forester") || lower.contains("plant")) {
             return "farmer";
         } else if (lower.contains("fish")) {
             return "fisherman";
         } else if (lower.contains("miner") || lower.contains("stone") || lower.contains("mason")) {
             return "mason";
-        } else if (lower.contains("smith") || lower.contains("smelt") || lower.contains("knight") || lower.contains("guard")) {
+        } else if (lower.contains("blacksmith") || lower.contains("weaponsmith") || lower.contains("knight") || lower.contains("guard")) {
             return "weaponsmith";
+        } else if (lower.contains("smelt") || lower.contains("tool")) {
+            return "toolsmith";
+        } else if (lower.contains("armor")) {
+            return "armorer";
         } else if (lower.contains("fletch") || lower.contains("archer")) {
             return "fletcher";
-        } else if (lower.contains("cook") || lower.contains("bake") || lower.contains("butcher")) {
-            return "butcher";
+        } else if (lower.contains("shepherd") || lower.contains("cow") || lower.contains("swine") || lower.contains("chicken") || lower.contains("rabbit")) {
+            return "shepherd";
         } else if (lower.contains("courier") || lower.contains("delivery")) {
             return "cartographer";
         } else if (lower.contains("cleric") || lower.contains("priest") || lower.contains("enchant")) {
             return "cleric";
-        } else if (lower.contains("library") || lower.contains("school") || lower.contains("teacher")) {
+        } else if (lower.contains("library") || lower.contains("school") || lower.contains("teacher") || lower.contains("university")) {
             return "librarian";
         }
         return "none";
