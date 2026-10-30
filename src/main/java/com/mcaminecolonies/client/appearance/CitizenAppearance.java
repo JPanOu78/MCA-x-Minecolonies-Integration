@@ -116,13 +116,13 @@ public class CitizenAppearance {
 
             if (isGrayscaleSkin) {
                 // Classic grayscale skins (0_classic.png ... 4_classic.png) require full colormap tinting.
-                // Prevent excessively dark grayscale skin by ensuring healthy minimum luminance
+                // Prevent excessively dark grayscale skin by ensuring healthy minimum luminance (215.0F floor)
                 int r = (calculatedColor >> 16) & 0xFF;
                 int g = (calculatedColor >> 8) & 0xFF;
                 int b = calculatedColor & 0xFF;
                 float lum = 0.299F * r + 0.587F * g + 0.114F * b;
-                if (lum < 165.0F && infection <= 0.05F) {
-                    float boost = 165.0F / Math.max(1.0F, lum);
+                if (lum < 215.0F && infection <= 0.05F) {
+                    float boost = 215.0F / Math.max(1.0F, lum);
                     r = Math.min(255, Math.round(r * boost));
                     g = Math.min(255, Math.round(g * boost));
                     b = Math.min(255, Math.round(b * boost));

@@ -11,6 +11,7 @@ import net.conczin.mca.entity.ai.Relationship;
 import net.conczin.mca.entity.ai.Traits;
 import net.conczin.mca.entity.ai.brain.VillagerBrain;
 import net.conczin.mca.entity.ai.relationship.AgeState;
+import net.conczin.mca.resources.data.skin.LayeredHair;
 import net.conczin.mca.entity.ai.relationship.CompassionateEntity;
 import net.conczin.mca.entity.ai.relationship.Gender;
 import net.conczin.mca.entity.interaction.EntityCommandHandler;
@@ -109,7 +110,18 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
                 this.setTrackedValue(VillagerLike.AGE_STATE, citizen.isBaby() ? AgeState.CHILD : AgeState.ADULT);
             }
 
-            // 5. Randomize clothes and hair if empty or if previously assigned baby diaper clothing
+            // 5. Initialize skin, clothes, and hair
+            if (this.getSkin() == null || this.getSkin().isEmpty()) {
+                try {
+                    this.randomizeSkin();
+                } catch (Exception ignored) {
+                }
+                if (this.getSkin() == null || this.getSkin().isEmpty()) {
+                    int skinIdx = (data != null) ? data.getSkinIndex() : 0;
+                    String gender = citizen.isFemale() ? "female" : "male";
+                    this.setSkin("mca:skins/skin/" + gender + "/" + (skinIdx % 5) + ".png");
+                }
+            }
             if (this.getClothes() == null || this.getClothes().isEmpty() || this.getClothes().contains("/baby/")) {
                 try {
                     this.randomizeClothes();
@@ -121,6 +133,17 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
                     this.randomizeHair();
                 } catch (Exception ignored) {
                 }
+            }
+
+            // 6. Natural dye defaults (-1 for eyes = derive from genetics, -16777216 for skin/hair = natural)
+            if (this.getEyeDye() == 0) {
+                this.clearEyeDye();
+            }
+            if (this.getEyeLeftDye() == 0) {
+                this.clearEyeLeftDye();
+            }
+            if (this.getSkinDye() == 0) {
+                this.clearSkinDye();
             }
         }
     }
@@ -243,14 +266,28 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
         if (tag.contains("HairStyle", 8)) {
             String style = tag.getString("HairStyle");
             data.setCustomHair(style);
-            this.setHair(style);
+            this.setHairStyleId(style);
         }
+        if (tag.contains("HairBase", 8)) this.setLayeredHair(LayeredHair.Category.BASE, tag.getString("HairBase"));
+        if (tag.contains("HairBangs", 8)) this.setLayeredHair(LayeredHair.Category.BANGS, tag.getString("HairBangs"));
+        if (tag.contains("HairBack", 8)) this.setLayeredHair(LayeredHair.Category.BACK, tag.getString("HairBack"));
+        if (tag.contains("HairFront", 8)) this.setLayeredHair(LayeredHair.Category.FRONT, tag.getString("HairFront"));
+        if (tag.contains("HairExtra", 8)) this.setLayeredHair(LayeredHair.Category.EXTRA, tag.getString("HairExtra"));
 
         if (tag.contains("Skin", 8)) {
             String skin = tag.getString("Skin");
             data.setCustomSkin(skin);
+            this.setSkin(skin);
         } else if (tag.contains("Skin", 99)) {
             float skinGene = tag.getFloat("Skin");
+            int sIdx = (int) Math.min(4.0F, Math.max(0.0F, skinGene * 5.0F));
+            data.setSkinIndex(sIdx);
+            data.setCustomSkin(null);
+            if (this.mcaminecolonies$genetics != null) {
+                this.mcaminecolonies$genetics.setGene(Genetics.SKIN, skinGene);
+            }
+        } else if (tag.contains("GeneSkin", 99)) {
+            float skinGene = tag.getFloat("GeneSkin");
             int sIdx = (int) Math.min(4.0F, Math.max(0.0F, skinGene * 5.0F));
             data.setSkinIndex(sIdx);
             data.setCustomSkin(null);
@@ -266,10 +303,23 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             if (this.mcaminecolonies$genetics != null) {
                 this.mcaminecolonies$genetics.setGene(Genetics.FACE, faceGene);
             }
+        } else if (tag.contains("GeneFace", 99)) {
+            float faceGene = tag.getFloat("GeneFace");
+            int fIdx = (int) Math.min(10.0F, Math.max(0.0F, faceGene * 11.0F));
+            data.setFaceIndex(fIdx);
+            if (this.mcaminecolonies$genetics != null) {
+                this.mcaminecolonies$genetics.setGene(Genetics.FACE, faceGene);
+            }
         }
 
         if (tag.contains("Melanin", 99)) {
             float m = tag.getFloat("Melanin");
+            data.setMelanin(m);
+            if (this.mcaminecolonies$genetics != null) {
+                this.mcaminecolonies$genetics.setGene(Genetics.MELANIN, m);
+            }
+        } else if (tag.contains("GeneMelanin", 99)) {
+            float m = tag.getFloat("GeneMelanin");
             data.setMelanin(m);
             if (this.mcaminecolonies$genetics != null) {
                 this.mcaminecolonies$genetics.setGene(Genetics.MELANIN, m);
@@ -282,30 +332,32 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             if (this.mcaminecolonies$genetics != null) {
                 this.mcaminecolonies$genetics.setGene(Genetics.HEMOGLOBIN, h);
             }
+        } else if (tag.contains("GeneHemoglobin", 99)) {
+            float h = tag.getFloat("GeneHemoglobin");
+            data.setHemoglobin(h);
+            if (this.mcaminecolonies$genetics != null) {
+                this.mcaminecolonies$genetics.setGene(Genetics.HEMOGLOBIN, h);
+            }
         }
 
         if (tag.contains("SkinColor", 99)) {
             int sc = tag.getInt("SkinColor");
             data.setSkinDye(sc);
+            this.setSkinDye(sc);
         } else if (tag.contains("SkinDye", 99)) {
             int sc = tag.getInt("SkinDye");
             data.setSkinDye(sc);
+            this.setSkinDye(sc);
         }
 
         if (tag.contains("HairColor", 99)) {
             int hc = tag.getInt("HairColor");
             data.setHairColor(hc);
-            float r = ((hc >> 16) & 0xFF) / 255.0F;
-            float g = ((hc >> 8) & 0xFF) / 255.0F;
-            float b = (hc & 0xFF) / 255.0F;
-            this.setHairDye(r, g, b);
+            this.setHairDye(hc);
         } else if (tag.contains("HairDye", 99)) {
             int hc = tag.getInt("HairDye");
             data.setHairColor(hc);
-            float r = ((hc >> 16) & 0xFF) / 255.0F;
-            float g = ((hc >> 8) & 0xFF) / 255.0F;
-            float b = (hc & 0xFF) / 255.0F;
-            this.setHairDye(r, g, b);
+            this.setHairDye(hc);
         } else if (tag.contains("HairColorRed", 99) && tag.contains("HairColorGreen", 99) && tag.contains("HairColorBlue", 99)) {
             float r = tag.getFloat("HairColorRed");
             float g = tag.getFloat("HairColorGreen");
@@ -315,7 +367,18 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             int ib = Math.round(b * 255.0F) & 0xFF;
             int hc = 0xFF000000 | (ir << 16) | (ig << 8) | ib;
             data.setHairColor(hc);
-            this.setHairDye(r, g, b);
+            this.setHairDye(hc);
+        }
+
+        if (tag.contains("EyeColor", 99)) {
+            this.setEyeDye(tag.getInt("EyeColor"));
+        } else if (tag.contains("EyeDye", 99)) {
+            this.setEyeDye(tag.getInt("EyeDye"));
+        }
+        if (tag.contains("EyeColorLeft", 99)) {
+            this.setEyeLeftDye(tag.getInt("EyeColorLeft"));
+        } else if (tag.contains("EyeLeftDye", 99)) {
+            this.setEyeLeftDye(tag.getInt("EyeLeftDye"));
         }
 
         if (tag.contains("Gender", 99)) {
@@ -352,12 +415,22 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
     public void syncFromEditor(CompoundTag tag) {
         this.readAdditionalSaveData(tag);
         if (tag.contains("CustomName", 8)) {
-            String name = tag.getString("CustomName");
-            if (!name.isBlank()) {
-                this.setCustomName(Component.literal(name));
+            String nameStr = tag.getString("CustomName");
+            if (!nameStr.isBlank()) {
                 AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
-                if (citizen.getCitizenData() != null) {
-                    citizen.getCitizenData().setName(name);
+                try {
+                    Component comp = Component.Serializer.fromJson(nameStr, this.registryAccess());
+                    if (comp != null) {
+                        this.setCustomName(comp);
+                        if (citizen.getCitizenData() != null) {
+                            citizen.getCitizenData().setName(comp.getString());
+                        }
+                    }
+                } catch (Exception e) {
+                    this.setCustomName(Component.literal(nameStr));
+                    if (citizen.getCitizenData() != null) {
+                        citizen.getCitizenData().setName(nameStr);
+                    }
                 }
             }
         }

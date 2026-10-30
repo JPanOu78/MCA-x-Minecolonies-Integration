@@ -71,12 +71,6 @@ public class CitizenMCARenderer {
 
                 defaultFaceModel = new CitizenMCAModel(modelSet.bakeLayer(ModelLayers.PLAYER), false);
                 slimFaceModel = new CitizenMCAModel(modelSet.bakeLayer(ModelLayers.PLAYER_SLIM), true);
-                defaultFaceModel.head.xScale = 1.0025F;
-                defaultFaceModel.head.yScale = 1.0025F;
-                defaultFaceModel.head.zScale = 1.0025F;
-                slimFaceModel.head.xScale = 1.0025F;
-                slimFaceModel.head.yScale = 1.0025F;
-                slimFaceModel.head.zScale = 1.0025F;
 
                 defaultFaceLayer = new CitizenFaceLayer(defaultParent, defaultFaceModel, "normal");
                 slimFaceLayer = new CitizenFaceLayer(slimParent, slimFaceModel, "normal");
@@ -125,9 +119,6 @@ public class CitizenMCARenderer {
 
         if (faceModel != null) {
             faceModel.applyAgeProportions(ageState);
-            faceModel.head.xScale *= 1.0025F;
-            faceModel.head.yScale *= 1.0025F;
-            faceModel.head.zScale *= 1.0025F;
         }
 
         poseStack.pushPose();

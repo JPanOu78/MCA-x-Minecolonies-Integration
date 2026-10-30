@@ -68,8 +68,8 @@ dependencies {
     compileOnly "curse.maven:structurize-298744:9017852"
     compileOnly "curse.maven:blockui-522992:8883780"
 
-    // MCA Reborn NeoForge dependency
-    compileOnly "curse.maven:minecraft-comes-alive-reborn-535291:7278618"
+    // MCA Reborn NeoForge dependency (matching exact runtime version from profile)
+    compileOnly files("libs/mca-neoforge-7.7.36-beta.3+1.21.1.jar")
 }
 
 tasks.named('jar', Jar) {
