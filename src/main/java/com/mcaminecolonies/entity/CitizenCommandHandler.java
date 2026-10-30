@@ -157,26 +157,9 @@ public class CitizenCommandHandler extends EntityCommandHandler {
         if (command.equals("gift") || command.startsWith("gift.")) {
             ItemStack held = player.getMainHandItem();
             if (!held.isEmpty()) {
-                // Check if gift is an MCA Engagement or Wedding Ring
-                if (held.getItem() instanceof RelationshipItem && this.entity.level() instanceof ServerLevel sl) {
-                    FamilyTree tree = FamilyTree.get(sl);
-                    FamilyTreeNode node = tree.getOrCreate(this.entity);
-                    FamilyTreeNode playerNode = tree.getOrCreate(player);
-                    boolean isWedding = held.getItem() == ItemsMCA.WEDDING_RING;
-                    RelationshipState targetState = isWedding ? RelationshipState.MARRIED_TO_PLAYER : RelationshipState.ENGAGED;
-
-                    node.updatePartner(player, targetState);
-                    playerNode.updatePartner(this.entity, targetState);
-                    PlayerSaveData pData = PlayerSaveData.get(player);
-                    if (isWedding) {
-                        pData.marry(this.entity);
-                    }
-                    held.shrink(1);
-
-                    sl.sendParticles(ParticleTypes.HEART, this.entity.getX(), this.entity.getEyeY() + 0.5, this.entity.getZ(), 15, 0.5, 0.5, 0.5, 0.1);
-                    this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.NEUTRAL, 1.0F, 1.0F);
-                    player.sendSystemMessage(Component.translatable(isWedding ? "interaction.weddingRing.success" : "interaction.engagementRing.success", this.entity.getDisplayName()));
-                    return true;
+                // Check if gift is an MCA Relationship Item (Bouquet, Engagement Ring, Wedding Ring, Divorce)
+                if (this.entity instanceof AbstractEntityCitizen citizen && CitizenRelationshipHelper.isRelationshipItem(held)) {
+                    return CitizenRelationshipHelper.handleRelationshipItem(player, held, citizen);
                 }
 
                 ItemStack gifted = held.split(1);

@@ -3,7 +3,10 @@ package com.mcaminecolonies.client.appearance;
 import com.mcaminecolonies.data.CitizenMCAData;
 import com.mcaminecolonies.data.CitizenMCAManager;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
+import net.conczin.mca.client.resources.ColorPalette;
 import net.conczin.mca.entity.VillagerLike;
+import net.conczin.mca.entity.ai.Genetics;
+import net.conczin.mca.entity.ai.Traits;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -15,10 +18,12 @@ public class CitizenAppearance {
     private final boolean isSlimModel;
     private final CitizenAgeState ageState;
     private final int skinIndex;
+    private final int skinColor;
     private final int faceIndex;
     private final int hairIndex;
     private final int hairColor;
     private final int clothingIndex;
+    private final String customSkin;
     private final String customClothes;
     private final String customHair;
 
@@ -36,13 +41,25 @@ public class CitizenAppearance {
         String vHair = null;
         int vHairDye = 0;
         int vSkinIndex = data.getSkinIndex();
+        float albinismMultiplier = 1.0F;
+        float melanin = 0.5F;
+        float hemoglobin = 0.5F;
+        float infection = 0.0F;
+
         if (citizen instanceof VillagerLike<?> vl) {
             vClothes = vl.getClothes();
             vHair = vl.getHair();
             vHairDye = vl.getHairDye();
-            if (vl.getGenetics() != null) {
-                vSkinIndex = (int) vl.getGenetics().getGene(net.conczin.mca.entity.ai.Genetics.SKIN);
+            if (vl.getTraits() != null && vl.getTraits().hasTrait(Traits.ALBINISM)) {
+                albinismMultiplier = 0.1F;
             }
+            if (vl.getGenetics() != null) {
+                float skinGene = vl.getGenetics().getGene(Genetics.SKIN);
+                vSkinIndex = (int) Math.min(4.0F, Math.max(0.0F, skinGene * 5.0F));
+                melanin = vl.getGenetics().getGene(Genetics.MELANIN) * albinismMultiplier;
+                hemoglobin = vl.getGenetics().getGene(Genetics.HEMOGLOBIN) * albinismMultiplier;
+            }
+            infection = vl.getInfectionProgress();
         }
 
         this.skinIndex = vSkinIndex;
@@ -50,13 +67,31 @@ public class CitizenAppearance {
         this.hairIndex = data.getHairIndex();
         this.clothingIndex = data.getClothingIndex();
 
-        this.customClothes = (vClothes != null && !vClothes.isEmpty() && !vClothes.contains("/baby/")) ? vClothes : null;
-        this.customHair = (vHair != null && !vHair.isEmpty()) ? vHair : null;
+        this.customSkin = (data.getCustomSkin() != null && !data.getCustomSkin().isEmpty()) ? data.getCustomSkin() : null;
+        this.customClothes = (vClothes != null && !vClothes.isEmpty() && !vClothes.contains("/baby/")) ? vClothes : data.getCustomClothes();
+        this.customHair = (vHair != null && !vHair.isEmpty()) ? vHair : data.getCustomHair();
 
         if (vHairDye != 0 && vHairDye != -16777216) {
             this.hairColor = vHairDye;
         } else {
             this.hairColor = data.getHairColor();
+        }
+
+        // Calculate resolved skin color matching MCA SkinLayer
+        if (data.getSkinDye() != 0 && data.getSkinDye() != -16777216) {
+            int dye = data.getSkinDye();
+            this.skinColor = (dye & 0xFF000000) == 0 ? (0xFF000000 | dye) : dye;
+        } else {
+            int calculatedColor;
+            try {
+                calculatedColor = ColorPalette.SKIN.getColor(melanin, hemoglobin, infection);
+            } catch (Exception e) {
+                calculatedColor = 0xFFD2B48C; // Natural skin fallback
+            }
+            if ((calculatedColor & 0xFF000000) == 0) {
+                calculatedColor |= 0xFF000000;
+            }
+            this.skinColor = calculatedColor;
         }
     }
 
@@ -80,7 +115,14 @@ public class CitizenAppearance {
         return hairColor;
     }
 
+    public int getSkinColor() {
+        return skinColor;
+    }
+
     public ResourceLocation getBaseSkinTexture() {
+        if (customSkin != null) {
+            return resolveMcaTexture(customSkin, "skins/skin/" + (isFemale ? "female" : "male") + "/" + (skinIndex % 5) + ".png");
+        }
         String genderDir = isFemale ? "female" : "male";
         return ResourceLocation.fromNamespaceAndPath(
             "mca",

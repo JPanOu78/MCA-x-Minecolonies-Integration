@@ -4,6 +4,7 @@ import com.mcaminecolonies.client.appearance.CitizenAgeState;
 import com.mcaminecolonies.client.gui.CitizenClientScreens;
 import com.mcaminecolonies.data.CitizenMCAData;
 import com.mcaminecolonies.data.CitizenMCAManager;
+import com.mcaminecolonies.entity.CitizenRelationshipHelper;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import net.conczin.mca.entity.ai.relationship.RelationshipState;
 import net.conczin.mca.server.world.data.PlayerSaveData;
@@ -79,78 +80,10 @@ public class CitizenInteractionHandler {
             return;
         }
 
-        // 4. Engagement Ring -> Propose to Citizen
-        if (itemId.contains("engagement_ring")) {
+        // 4. Relationship Items (Bouquet, Engagement Ring, Wedding Ring, Divorce Papers)
+        if (CitizenRelationshipHelper.isRelationshipItem(held)) {
             if (!event.getLevel().isClientSide() && player instanceof ServerPlayer serverPlayer) {
-                PlayerSaveData playerData = PlayerSaveData.get(serverPlayer);
-                if (citizen.isBaby() || !data.getAgeState(citizen.isBaby()).isAdult()) {
-                    serverPlayer.displayClientMessage(Component.translatable("interaction.engage.fail.child"), true);
-                } else if (playerData.isMarried()) {
-                    serverPlayer.displayClientMessage(Component.translatable("interaction.engage.fail.married"), true);
-                } else if (playerData.isEngagedWith(citizen.getUUID())) {
-                    serverPlayer.displayClientMessage(Component.translatable("interaction.engage.fail.engaged"), true);
-                } else if (data.getHearts() < 50) {
-                    serverPlayer.displayClientMessage(Component.translatable("interaction.engage.fail.hearts"), true);
-                } else {
-                    playerData.engage(citizen);
-                    data.addHearts(20);
-                    CitizenMCAManager.saveData(citizen, data);
-                    playEffect(citizen, SoundEvents.PLAYER_LEVELUP, ParticleTypes.HEART);
-                    serverPlayer.displayClientMessage(Component.translatable("interaction.engage.success"), true);
-                    if (!player.isCreative()) {
-                        held.shrink(1);
-                    }
-                }
-            }
-            event.setCanceled(true);
-            event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
-            return;
-        }
-
-        // 5. Wedding Ring -> Marry Citizen
-        if (itemId.contains("wedding_ring")) {
-            if (!event.getLevel().isClientSide() && player instanceof ServerPlayer serverPlayer) {
-                PlayerSaveData playerData = PlayerSaveData.get(serverPlayer);
-                if (citizen.isBaby() || !data.getAgeState(citizen.isBaby()).isAdult()) {
-                    serverPlayer.displayClientMessage(Component.translatable("interaction.marry.fail.child"), true);
-                } else if (playerData.isMarriedTo(citizen.getUUID())) {
-                    serverPlayer.displayClientMessage(Component.literal("§eYou are already married to " + citizen.getDisplayName().getString() + "!"), true);
-                } else if (playerData.isMarried()) {
-                    serverPlayer.displayClientMessage(Component.translatable("interaction.marry.fail.married"), true);
-                } else if (!playerData.isEngagedWith(citizen.getUUID()) && data.getHearts() < 80) {
-                    serverPlayer.displayClientMessage(Component.translatable("interaction.marry.fail.hearts"), true);
-                } else {
-                    playerData.marry(citizen);
-                    data.setHearts(100);
-                    CitizenMCAManager.saveData(citizen, data);
-                    playEffect(citizen, SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, ParticleTypes.HEART);
-                    serverPlayer.displayClientMessage(Component.translatable("interaction.marry.success"), true);
-                    if (!player.isCreative()) {
-                        held.shrink(1);
-                    }
-                }
-            }
-            event.setCanceled(true);
-            event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
-            return;
-        }
-
-        // 6. Divorce Papers -> End Marriage/Engagement
-        if (itemId.contains("divorce_papers") || itemId.contains("divorce")) {
-            if (!event.getLevel().isClientSide() && player instanceof ServerPlayer serverPlayer) {
-                PlayerSaveData playerData = PlayerSaveData.get(serverPlayer);
-                if (playerData.isMarriedTo(citizen.getUUID()) || playerData.isEngagedWith(citizen.getUUID())) {
-                    playerData.endRelationShip(RelationshipState.SINGLE);
-                    data.setHearts(Math.max(0, data.getHearts() - 50));
-                    CitizenMCAManager.saveData(citizen, data);
-                    playEffect(citizen, SoundEvents.VILLAGER_NO, ParticleTypes.SMOKE);
-                    serverPlayer.displayClientMessage(Component.literal("§cYou are now divorced from " + citizen.getDisplayName().getString() + "."), true);
-                    if (!player.isCreative()) {
-                        held.shrink(1);
-                    }
-                } else {
-                    serverPlayer.displayClientMessage(Component.literal("§eYou are not married to " + citizen.getDisplayName().getString() + "."), true);
-                }
+                CitizenRelationshipHelper.handleRelationshipItem(serverPlayer, held, citizen);
             }
             event.setCanceled(true);
             event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));

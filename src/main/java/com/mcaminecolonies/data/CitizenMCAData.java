@@ -17,6 +17,8 @@ public class CitizenMCAData {
     private int faceIndex;
     private int hairColor;
     private int clothingIndex;
+    private String customSkin;
+    private int skinDye = -16777216;
     private String customClothes;
     private String customHair;
     private String personality;
@@ -85,6 +87,8 @@ public class CitizenMCAData {
         tag.putInt("FaceIndex", this.faceIndex);
         tag.putInt("HairColor", this.hairColor);
         tag.putInt("ClothingIndex", this.clothingIndex);
+        if (this.customSkin != null) tag.putString("CustomSkin", this.customSkin);
+        tag.putInt("SkinDye", this.skinDye);
         if (this.customClothes != null) tag.putString("CustomClothes", this.customClothes);
         if (this.customHair != null) tag.putString("CustomHair", this.customHair);
         tag.putString("Personality", this.personality);
@@ -106,6 +110,8 @@ public class CitizenMCAData {
         data.faceIndex = tag.getInt("FaceIndex");
         data.hairColor = tag.contains("HairColor") ? tag.getInt("HairColor") : DEFAULT_HAIR_COLOR;
         data.clothingIndex = tag.getInt("ClothingIndex");
+        if (tag.contains("CustomSkin")) data.customSkin = tag.getString("CustomSkin");
+        if (tag.contains("SkinDye")) data.skinDye = tag.getInt("SkinDye");
         if (tag.contains("CustomClothes")) data.customClothes = tag.getString("CustomClothes");
         if (tag.contains("CustomHair")) data.customHair = tag.getString("CustomHair");
         data.personality = tag.contains("Personality") ? tag.getString("Personality") : "friendly";
@@ -173,6 +179,22 @@ public class CitizenMCAData {
 
     public void setClothingIndex(int clothingIndex) {
         this.clothingIndex = (clothingIndex % 10 + 10) % 10;
+    }
+
+    public String getCustomSkin() {
+        return customSkin;
+    }
+
+    public void setCustomSkin(String customSkin) {
+        this.customSkin = customSkin;
+    }
+
+    public int getSkinDye() {
+        return skinDye;
+    }
+
+    public void setSkinDye(int skinDye) {
+        this.skinDye = skinDye;
     }
 
     public String getCustomClothes() {

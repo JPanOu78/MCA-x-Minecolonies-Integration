@@ -245,7 +245,7 @@ public class CitizenMCARenderer {
         model.rightPants.visible = false;
         ResourceLocation skinTexture = appearance.getBaseSkinTexture();
         VertexConsumer skinConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(skinTexture));
-        model.renderToBuffer(poseStack, skinConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+        model.renderToBuffer(poseStack, skinConsumer, packedLight, OverlayTexture.NO_OVERLAY, appearance.getSkinColor());
 
         // 2. Render Face / Expression Layer (Head only, native MCA sclera/iris/details and blinking)
         FaceLayer<AbstractEntityCitizen, HumanoidModel<AbstractEntityCitizen>> faceLayer =

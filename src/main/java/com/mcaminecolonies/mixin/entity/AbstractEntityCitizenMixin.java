@@ -1,5 +1,6 @@
 package com.mcaminecolonies.mixin.entity;
 
+import com.mcaminecolonies.data.CitizenMCAData;
 import com.mcaminecolonies.data.CitizenMCAManager;
 import com.mcaminecolonies.data.IMCAEntityCitizen;
 import com.mcaminecolonies.entity.CitizenCommandHandler;
@@ -77,16 +78,26 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             this.mcaminecolonies$interactions = new CitizenCommandHandler(this);
             this.mcaminecolonies$villagerData = new VillagerData(VillagerType.PLAINS, VillagerProfession.NONE, 1);
 
-            // Sync gender with MineColonies
+            // 1. Randomize genetics to initialize all gene parameters
+            this.mcaminecolonies$genetics.randomize();
+
+            // 2. Sync gender with MineColonies
             AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
             this.mcaminecolonies$genetics.setGender(citizen.isFemale() ? Gender.FEMALE : Gender.MALE);
 
-            // Set tracked age state (walking child citizens use CHILD, adults use ADULT)
+            // 3. Sync initial skin/face index from seed data if not customized
+            CitizenMCAData data = CitizenMCAManager.getData(citizen);
+            if (data != null && !data.isCustomized()) {
+                this.mcaminecolonies$genetics.setGene(Genetics.SKIN, (data.getSkinIndex() + 0.5F) / 5.0F);
+                this.mcaminecolonies$genetics.setGene(Genetics.FACE, (data.getFaceIndex() + 0.5F) / 22.0F);
+            }
+
+            // 4. Set tracked age state (walking child citizens use CHILD, adults use ADULT)
             if (this.getTrackedValue(VillagerLike.AGE_STATE) == AgeState.UNASSIGNED || this.getTrackedValue(VillagerLike.AGE_STATE) == AgeState.BABY) {
                 this.setTrackedValue(VillagerLike.AGE_STATE, citizen.isBaby() ? AgeState.CHILD : AgeState.ADULT);
             }
 
-            // Randomize clothes and hair if empty or if previously assigned baby diaper clothing
+            // 5. Randomize clothes and hair if empty or if previously assigned baby diaper clothing
             if (this.getClothes() == null || this.getClothes().isEmpty() || this.getClothes().contains("/baby/")) {
                 try {
                     this.randomizeClothes();
@@ -161,10 +172,63 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
 
     @Override
     public AgeState getAgeState() {
-        if (this.isBaby()) {
-            return AgeState.BABY;
+        AgeState state = (AgeState) this.getTrackedValue(VillagerLike.AGE_STATE);
+        if (state == null || state == AgeState.UNASSIGNED) {
+            AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
+            return citizen.isBaby() ? AgeState.CHILD : AgeState.ADULT;
         }
-        return AgeState.ADULT;
+        if (state == AgeState.BABY) {
+            return AgeState.CHILD;
+        }
+        return state;
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        mcaminecolonies$initMCA();
+        MCAMINECOLONIES$DATA_MANAGER.save(this, tag);
+        if (this.mcaminecolonies$relations != null) {
+            this.mcaminecolonies$relations.writeToNbt(tag);
+        }
+        CitizenMCAData data = CitizenMCAManager.getData((AbstractEntityCitizen) (Object) this);
+        if (data != null) {
+            tag.put("MCAColoniesData", data.toNbt());
+            if (data.getCustomSkin() != null) tag.putString("Skin", data.getCustomSkin());
+            tag.putInt("SkinDye", data.getSkinDye());
+        }
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        if (tag == null) return;
+        mcaminecolonies$initMCA();
+        MCAMINECOLONIES$DATA_MANAGER.load(this, tag);
+        if (this.mcaminecolonies$relations != null) {
+            this.mcaminecolonies$relations.readFromNbt(tag);
+        }
+
+        AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
+        CitizenMCAData data = CitizenMCAManager.getData(citizen);
+        if (tag.contains("Clothes")) data.setCustomClothes(tag.getString("Clothes"));
+        if (tag.contains("Hair")) data.setCustomHair(tag.getString("Hair"));
+        if (tag.contains("Skin")) data.setCustomSkin(tag.getString("Skin"));
+        if (tag.contains("SkinDye")) data.setSkinDye(tag.getInt("SkinDye"));
+        int hairDye = this.getHairDye();
+        if (hairDye != 0 && hairDye != -16777216) data.setHairColor(hairDye);
+        if (tag.contains("Gender")) {
+            boolean female = "FEMALE".equalsIgnoreCase(tag.getString("Gender"));
+            data.setFemale(female);
+        }
+        data.setCustomized(true);
+        CitizenMCAManager.saveData(citizen, data);
+    }
+
+    @Override
+    public void syncFromEditor(CompoundTag tag) {
+        VillagerLike.super.syncFromEditor(tag);
+        this.readAdditionalSaveData(tag);
     }
 
     @Override
