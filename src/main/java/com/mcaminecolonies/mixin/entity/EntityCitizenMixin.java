@@ -78,22 +78,14 @@ public abstract class EntityCitizenMixin {
             if (vl.getHairStyleId() != null && !vl.getHairStyleId().isEmpty()) {
                 tag.putString("HairStyle", vl.getHairStyleId());
             }
-            if (vl.getSkinDye() != -16777216) {
-                tag.putInt("SkinColor", vl.getSkinDye());
-                tag.putInt("SkinDye", vl.getSkinDye());
-            }
-            if (vl.getHairDye() != -16777216) {
-                tag.putInt("HairColor", vl.getHairDye());
-                tag.putInt("HairDye", vl.getHairDye());
-            }
-            if (vl.getEyeDye() != -1) {
-                tag.putInt("EyeColor", vl.getEyeDye());
-                tag.putInt("EyeDye", vl.getEyeDye());
-            }
-            if (vl.getEyeLeftDye() != -1) {
-                tag.putInt("EyeColorLeft", vl.getEyeLeftDye());
-                tag.putInt("EyeLeftDye", vl.getEyeLeftDye());
-            }
+            tag.putInt("SkinColor", vl.getSkinDye());
+            tag.putInt("SkinDye", vl.getSkinDye());
+            tag.putInt("HairColor", vl.getHairDye());
+            tag.putInt("HairDye", vl.getHairDye());
+            tag.putInt("EyeColor", vl.getEyeDye());
+            tag.putInt("EyeDye", vl.getEyeDye());
+            tag.putInt("EyeColorLeft", vl.getEyeLeftDye());
+            tag.putInt("EyeLeftDye", vl.getEyeLeftDye());
         }
     }
 

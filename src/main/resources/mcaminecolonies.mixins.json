@@ -7,7 +7,9 @@
   "client": [
     "client.CitizenRendererMixin",
     "client.MainWindowCitizenMixin",
-    "client.InteractScreenMixin"
+    "client.InteractScreenMixin",
+    "client.VillagerEditorScreenMixin",
+    "client.AbstractWindowSkeletonMixin"
   ],
   "mixins": [
     "entity.AbstractEntityCitizenMixin",

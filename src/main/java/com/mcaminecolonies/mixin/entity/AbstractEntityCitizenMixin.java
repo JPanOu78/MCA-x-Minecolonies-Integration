@@ -240,6 +240,14 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             tag.put("MCAColoniesData", data.toNbt());
             if (data.getCustomSkin() != null) tag.putString("Skin", data.getCustomSkin());
             tag.putInt("SkinDye", data.getSkinDye());
+            tag.putInt("SkinColor", data.getSkinDye());
+            int hairDye = (data.getHairColor() != 0 && data.getHairColor() != -16777216) ? data.getHairColor() : this.getHairDye();
+            tag.putInt("HairColor", hairDye);
+            tag.putInt("HairDye", hairDye);
+            tag.putInt("EyeDye", this.getEyeDye());
+            tag.putInt("EyeColor", this.getEyeDye());
+            tag.putInt("EyeColorLeft", this.getEyeLeftDye());
+            tag.putInt("EyeLeftDye", this.getEyeLeftDye());
             AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
             int mcaAge = citizen.isBaby()
                     ? (int) (((float) data.getAge() / (float) CitizenAgeState.ADULT.getMinAge() - 1.0F) * AgeState.getMaxAge())

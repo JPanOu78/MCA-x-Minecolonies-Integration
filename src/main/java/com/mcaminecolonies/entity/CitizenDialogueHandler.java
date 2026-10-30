@@ -22,6 +22,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -104,6 +105,8 @@ public class CitizenDialogueHandler {
             }
             MutableComponent reply = Component.translatable("dialogue.chat.fail");
             player.sendSystemMessage(Component.literal("<" + citizen.getDisplayName().getString() + "> ").append(reply));
+            // Send empty dialogue options to clear any previous answers, and show rejection phrase
+            Network.sendToPlayer(new InteractionDialogueResponse("", Collections.emptyList()), player);
             Network.sendToPlayer(new InteractionDialogueQuestionResponse(reply, false), player);
             return;
         }
@@ -161,14 +164,15 @@ public class CitizenDialogueHandler {
             }
             MutableComponent reply = Component.translatable("dialogue.chat.fail");
             player.sendSystemMessage(Component.literal("<" + citizen.getDisplayName().getString() + "> ").append(reply));
+            Network.sendToPlayer(new InteractionDialogueResponse("", Collections.emptyList()), player);
             Network.sendToPlayer(new InteractionDialogueQuestionResponse(reply, false), player);
             return;
         }
 
         VillagerEntityMCA delegate = getOrCreateDelegate(citizen, player);
 
-        // Forward interaction command to citizen directly (for stay, follow, etc.)
-        if (citizen instanceof VillagerLike<?> vl) {
+        // Forward non-dialogue movement commands to citizen directly (stay, follow, move, etc.)
+        if (citizen instanceof VillagerLike<?> vl && !isDialogueTopic(answer)) {
             vl.getInteractions().handle(player, answer);
         }
 
@@ -179,6 +183,14 @@ public class CitizenDialogueHandler {
 
         Dialogues.getInstance().selectAnswer(delegate, player, question, answer);
         syncAfterDialogue(citizen, delegate, player);
+    }
+
+    private static boolean isDialogueTopic(String cmd) {
+        if (cmd == null) return false;
+        return switch (cmd) {
+            case "chat", "joke", "story", "hug", "flirt", "kiss", "procreate", "adopt", "divorce", "rock_paper_scissor", "rumors" -> true;
+            default -> false;
+        };
     }
 
     private static void syncAfterDialogue(AbstractEntityCitizen citizen, VillagerEntityMCA delegate, ServerPlayer player) {
