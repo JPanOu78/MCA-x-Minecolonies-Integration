@@ -6,6 +6,7 @@ import com.mcaminecolonies.data.IMCAEntityCitizen;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import com.minecolonies.core.entity.citizen.EntityCitizen;
 import net.conczin.mca.entity.VillagerLike;
+import net.conczin.mca.entity.ai.Genetics;
 import net.conczin.mca.util.network.datasync.CDataManager;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
@@ -84,10 +85,20 @@ public abstract class EntityCitizenMixin {
                     } else if (tag.contains("SkinColor", 99)) {
                         data.setSkinDye(tag.getInt("SkinColor"));
                     }
-                    if (vl.getGenetics() != null && vl.getGenetics().getGender() != null && vl.getGenetics().getGender() != net.conczin.mca.entity.ai.relationship.Gender.UNASSIGNED) {
-                        boolean fem = (vl.getGenetics().getGender() == net.conczin.mca.entity.ai.relationship.Gender.FEMALE);
-                        data.setFemale(fem);
-                        citizen.setFemale(fem);
+                    if (vl.getGenetics() != null) {
+                        float mGene = vl.getGenetics().getGene(Genetics.MELANIN);
+                        if (mGene > 0.0F) {
+                            data.setMelanin(mGene);
+                        }
+                        float hGene = vl.getGenetics().getGene(Genetics.HEMOGLOBIN);
+                        if (hGene > 0.0F) {
+                            data.setHemoglobin(hGene);
+                        }
+                        if (vl.getGenetics().getGender() != null && vl.getGenetics().getGender() != net.conczin.mca.entity.ai.relationship.Gender.UNASSIGNED) {
+                            boolean fem = (vl.getGenetics().getGender() == net.conczin.mca.entity.ai.relationship.Gender.FEMALE);
+                            data.setFemale(fem);
+                            citizen.setFemale(fem);
+                        }
                     }
                     data.setCustomized(true);
                     CitizenMCAManager.saveData(citizen, data);

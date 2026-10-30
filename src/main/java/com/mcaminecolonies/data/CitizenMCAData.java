@@ -19,8 +19,8 @@ public class CitizenMCAData {
     private int clothingIndex;
     private String customSkin;
     private int skinDye = -16777216;
-    private float melanin = 0.5F;
-    private float hemoglobin = 0.5F;
+    private float melanin = 0.18F;
+    private float hemoglobin = 0.15F;
     private String customClothes;
     private String customHair;
     private String personality;
@@ -66,6 +66,12 @@ public class CitizenMCAData {
         data.setHairIndex((seed1 / 7) % 40);
         data.setHairColor(NATURAL_HAIR_COLORS[(seed2 / 13) % NATURAL_HAIR_COLORS.length]);
         data.setClothingIndex((seed2 / 11) % 10);
+
+        // Generate natural baseline melanin & hemoglobin
+        float naturalMelanin = 0.12F + ((seed1 % 100) / 100.0F) * 0.15F; // range 0.12F to 0.27F
+        float naturalHemoglobin = 0.10F + ((seed2 % 100) / 100.0F) * 0.12F; // range 0.10F to 0.22F
+        data.setMelanin(naturalMelanin);
+        data.setHemoglobin(naturalHemoglobin);
 
         String[] personalities = {"friendly", "playful", "serious", "shy", "flirty", "brave"};
         data.setPersonality(personalities[(seed1 / 17) % personalities.length]);
@@ -118,6 +124,17 @@ public class CitizenMCAData {
         if (tag.contains("SkinDye")) data.skinDye = tag.getInt("SkinDye");
         if (tag.contains("Melanin")) data.melanin = tag.getFloat("Melanin");
         if (tag.contains("Hemoglobin")) data.hemoglobin = tag.getFloat("Hemoglobin");
+
+        // Legacy auto-upgrade: if citizen was saved with the old buggy 0.5F defaults and is not customized,
+        // upgrade to natural seed-based genetics so citizens do not render with dark muddy skin
+        if (!data.isCustomized && Math.abs(data.melanin - 0.5F) < 0.001F && Math.abs(data.hemoglobin - 0.5F) < 0.001F) {
+            long lsb = fallbackUuid.getLeastSignificantBits();
+            long msb = fallbackUuid.getMostSignificantBits();
+            int seed1 = (int) Math.abs(lsb % 1000000007L);
+            int seed2 = (int) Math.abs(msb % 1000000009L);
+            data.melanin = 0.12F + ((seed1 % 100) / 100.0F) * 0.15F;
+            data.hemoglobin = 0.10F + ((seed2 % 100) / 100.0F) * 0.12F;
+        }
         if (tag.contains("CustomClothes")) data.customClothes = tag.getString("CustomClothes");
         if (tag.contains("CustomHair")) data.customHair = tag.getString("CustomHair");
         data.personality = tag.contains("Personality") ? tag.getString("Personality") : "friendly";

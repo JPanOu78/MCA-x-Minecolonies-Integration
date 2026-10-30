@@ -97,20 +97,54 @@ public class CitizenAppearance {
         }
 
         // Calculate resolved skin color matching MCA SkinLayer
-        if (data.getSkinDye() != 0 && data.getSkinDye() != -16777216) {
-            int dye = data.getSkinDye();
-            this.skinColor = (dye & 0xFF000000) == 0 ? (0xFF000000 | dye) : dye;
+        int resolvedSkinDye = data.getSkinDye();
+        if (resolvedSkinDye != 0 && resolvedSkinDye != -16777216) {
+            this.skinColor = (resolvedSkinDye & 0xFF000000) == 0 ? (0xFF000000 | resolvedSkinDye) : resolvedSkinDye;
         } else {
+            ResourceLocation baseSkin = this.getBaseSkinTexture();
+            boolean isGrayscaleSkin = baseSkin.getPath().contains("_classic");
+
             int calculatedColor;
             try {
                 calculatedColor = ColorPalette.SKIN.getColor(melanin, hemoglobin, infection);
             } catch (Exception e) {
-                calculatedColor = 0xFFD2B48C; // Natural skin fallback
+                calculatedColor = 0xFFE9D4BC; // Natural skin tone fallback RGB(233, 212, 188)
             }
             if ((calculatedColor & 0xFF000000) == 0) {
                 calculatedColor |= 0xFF000000;
             }
-            this.skinColor = calculatedColor;
+
+            if (isGrayscaleSkin) {
+                // Classic grayscale skins (0_classic.png ... 4_classic.png) require full colormap tinting.
+                // Prevent excessively dark grayscale skin by ensuring healthy minimum luminance
+                int r = (calculatedColor >> 16) & 0xFF;
+                int g = (calculatedColor >> 8) & 0xFF;
+                int b = calculatedColor & 0xFF;
+                float lum = 0.299F * r + 0.587F * g + 0.114F * b;
+                if (lum < 165.0F && infection <= 0.05F) {
+                    float boost = 165.0F / Math.max(1.0F, lum);
+                    r = Math.min(255, Math.round(r * boost));
+                    g = Math.min(255, Math.round(g * boost));
+                    b = Math.min(255, Math.round(b * boost));
+                    calculatedColor = 0xFF000000 | (r << 16) | (g << 8) | b;
+                }
+                this.skinColor = calculatedColor;
+            } else {
+                // Modern pre-colored skin textures (0.png through 4.png) already have RGB(232, 210, 185) built in!
+                // If melanin is <= 0.25F, use clean 0xFFFFFFFF so modern skins are crisp and natural.
+                // If melanin is higher, normalize tint against baseline #E9D4BC so it darkens proportionally without crushing blacks.
+                if (melanin <= 0.25F && infection <= 0.05F) {
+                    this.skinColor = 0xFFFFFFFF;
+                } else {
+                    int cr = (calculatedColor >> 16) & 0xFF;
+                    int cg = (calculatedColor >> 8) & 0xFF;
+                    int cb = calculatedColor & 0xFF;
+                    int nr = Math.min(255, Math.round((cr / 233.0F) * 255.0F));
+                    int ng = Math.min(255, Math.round((cg / 212.0F) * 255.0F));
+                    int nb = Math.min(255, Math.round((cb / 188.0F) * 255.0F));
+                    this.skinColor = 0xFF000000 | (nr << 16) | (ng << 8) | nb;
+                }
+            }
         }
     }
 

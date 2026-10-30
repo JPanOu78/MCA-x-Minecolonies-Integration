@@ -42,8 +42,8 @@ public class CitizenMCARenderer {
     private static ItemInHandLayer<AbstractEntityCitizen, CitizenMCAModel> defaultItemLayer;
     private static ItemInHandLayer<AbstractEntityCitizen, CitizenMCAModel> slimItemLayer;
 
-    private static FaceLayer<AbstractEntityCitizen, CitizenMCAModel> defaultFaceLayer;
-    private static FaceLayer<AbstractEntityCitizen, CitizenMCAModel> slimFaceLayer;
+    private static CitizenFaceLayer defaultFaceLayer;
+    private static CitizenFaceLayer slimFaceLayer;
     private static CitizenMCAModel defaultFaceModel;
     private static CitizenMCAModel slimFaceModel;
 
@@ -71,15 +71,15 @@ public class CitizenMCARenderer {
 
                 defaultFaceModel = new CitizenMCAModel(modelSet.bakeLayer(ModelLayers.PLAYER), false);
                 slimFaceModel = new CitizenMCAModel(modelSet.bakeLayer(ModelLayers.PLAYER_SLIM), true);
-                defaultFaceModel.head.xScale = 1.002F;
-                defaultFaceModel.head.yScale = 1.002F;
-                defaultFaceModel.head.zScale = 1.002F;
-                slimFaceModel.head.xScale = 1.002F;
-                slimFaceModel.head.yScale = 1.002F;
-                slimFaceModel.head.zScale = 1.002F;
+                defaultFaceModel.head.xScale = 1.0025F;
+                defaultFaceModel.head.yScale = 1.0025F;
+                defaultFaceModel.head.zScale = 1.0025F;
+                slimFaceModel.head.xScale = 1.0025F;
+                slimFaceModel.head.yScale = 1.0025F;
+                slimFaceModel.head.zScale = 1.0025F;
 
-                defaultFaceLayer = new FaceLayer<>(defaultParent, defaultFaceModel, "normal");
-                slimFaceLayer = new FaceLayer<>(slimParent, slimFaceModel, "normal");
+                defaultFaceLayer = new CitizenFaceLayer(defaultParent, defaultFaceModel, "normal");
+                slimFaceLayer = new CitizenFaceLayer(slimParent, slimFaceModel, "normal");
             }
         }
     }
@@ -117,7 +117,7 @@ public class CitizenMCARenderer {
                 appearance.isSlimModel() ? slimArmorLayer : defaultArmorLayer;
         ItemInHandLayer<AbstractEntityCitizen, CitizenMCAModel> itemLayer =
                 appearance.isSlimModel() ? slimItemLayer : defaultItemLayer;
-        FaceLayer<AbstractEntityCitizen, CitizenMCAModel> faceLayer =
+        CitizenFaceLayer faceLayer =
                 appearance.isSlimModel() ? slimFaceLayer : defaultFaceLayer;
         CitizenMCAModel faceModel =
                 appearance.isSlimModel() ? slimFaceModel : defaultFaceModel;
@@ -125,9 +125,9 @@ public class CitizenMCARenderer {
 
         if (faceModel != null) {
             faceModel.applyAgeProportions(ageState);
-            faceModel.head.xScale *= 1.002F;
-            faceModel.head.yScale *= 1.002F;
-            faceModel.head.zScale *= 1.002F;
+            faceModel.head.xScale *= 1.0025F;
+            faceModel.head.yScale *= 1.0025F;
+            faceModel.head.zScale *= 1.0025F;
         }
 
         poseStack.pushPose();
@@ -233,32 +233,32 @@ public class CitizenMCARenderer {
         VertexConsumer skinConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(skinTexture));
         model.renderToBuffer(poseStack, skinConsumer, packedLight, OverlayTexture.NO_OVERLAY, appearance.getSkinColor());
 
-        // 2. Render Face / Expression Layer (Native MCA FaceLayer: blinking, genetic iris colors, sclera, details)
+        // 2. Render Face / Expression Layer (Cutout pass with +0.0025F offset so eyes sit cleanly on front of skin)
         if (faceLayer != null) {
             faceLayer.render(poseStack, buffer, packedLight, entity, limbSwing, limbSwingAmount, partialTicks, ageInTicks, netHeadYaw, headPitch);
         }
 
-        // 3. Render Hair Layer with Hair Color Tinting (Head and Hat only)
-        model.setAllVisible(false);
-        model.head.visible = true;
-        model.hat.visible = true;
-        model.head.xScale *= 1.01F;
-        model.head.yScale *= 1.01F;
-        model.head.zScale *= 1.01F;
-        ResourceLocation hairTexture = appearance.getHairTexture();
-        VertexConsumer hairConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(hairTexture));
-        model.renderToBuffer(poseStack, hairConsumer, packedLight, OverlayTexture.NO_OVERLAY, appearance.getHairColor());
-        model.head.xScale /= 1.01F;
-        model.head.yScale /= 1.01F;
-        model.head.zScale /= 1.01F;
-
-        // 4. Render Job/Clothing Layer (Body, limbs, and outer clothing; hide head/hat)
+        // 3. Render Job/Clothing Layer (Body and limbs; hide head/hat)
         model.setAllVisible(true);
         model.head.visible = false;
         model.hat.visible = false;
         ResourceLocation clothingTexture = appearance.getClothingTexture(jobName);
         VertexConsumer clothingConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(clothingTexture));
         model.renderToBuffer(poseStack, clothingConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+
+        // 4. Render Hair Layer with Hair Color Tinting (Head and Hat only with +0.03F scale so hair bangs sit in front of eyes and clothes)
+        model.setAllVisible(false);
+        model.head.visible = true;
+        model.hat.visible = true;
+        model.head.xScale *= 1.03F;
+        model.head.yScale *= 1.03F;
+        model.head.zScale *= 1.03F;
+        ResourceLocation hairTexture = appearance.getHairTexture();
+        VertexConsumer hairConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(hairTexture));
+        model.renderToBuffer(poseStack, hairConsumer, packedLight, OverlayTexture.NO_OVERLAY, appearance.getHairColor());
+        model.head.xScale /= 1.03F;
+        model.head.yScale /= 1.03F;
+        model.head.zScale /= 1.03F;
 
         // Reset all parts visible for armor and held items
         model.setAllVisible(true);
