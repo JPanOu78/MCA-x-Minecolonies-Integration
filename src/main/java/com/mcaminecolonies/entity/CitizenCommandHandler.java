@@ -1,5 +1,7 @@
 package com.mcaminecolonies.entity;
 
+import com.mcaminecolonies.data.CitizenMCAData;
+import com.mcaminecolonies.data.CitizenMCAManager;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import net.conczin.mca.entity.VillagerLike;
 import net.conczin.mca.entity.ai.Memories;
@@ -55,13 +57,67 @@ public class CitizenCommandHandler extends EntityCommandHandler {
             vl.getVillagerBrain().setMoveState(state, player);
             this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0F, 1.0F);
             if (state == MoveState.FOLLOW) {
+                if (this.entity instanceof AbstractEntityCitizen citizen) {
+                    CitizenMCAData mcaData = CitizenMCAManager.getData(citizen);
+                    mcaData.setFollowTarget(player.getUUID());
+                    CitizenMCAManager.saveData(citizen, mcaData);
+                }
                 player.sendSystemMessage(Component.translatable("mca.interaction.follow.success", this.entity.getDisplayName()));
             } else if (state == MoveState.STAY) {
+                if (this.entity instanceof AbstractEntityCitizen citizen) {
+                    citizen.getNavigation().stop();
+                }
                 player.sendSystemMessage(Component.translatable("mca.interaction.stay.success", this.entity.getDisplayName()));
             } else {
                 player.sendSystemMessage(Component.translatable("mca.interaction.move.success", this.entity.getDisplayName()));
             }
             return true;
+        }
+
+        // 1b. Home commands (gohome, sethome) based on MineColonies Resident Hut
+        if (command.equals("gohome")) {
+            if (this.entity instanceof AbstractEntityCitizen citizen) {
+                net.minecraft.core.BlockPos homePos = null;
+                if (citizen.getCitizenData() != null) {
+                    homePos = citizen.getCitizenData().getBedPos();
+                    if (homePos == null || homePos.equals(net.minecraft.core.BlockPos.ZERO)) {
+                        homePos = citizen.getCitizenData().getHomePosition();
+                    }
+                }
+                if (homePos == null || homePos.equals(net.minecraft.core.BlockPos.ZERO)) {
+                    homePos = citizen.getEntityData().get(AbstractEntityCitizen.DATA_BED_POS);
+                }
+
+                if (homePos != null && !homePos.equals(net.minecraft.core.BlockPos.ZERO)) {
+                    citizen.getNavigation().moveTo(homePos.getX() + 0.5, homePos.getY() + 0.5, homePos.getZ() + 0.5, 1.0);
+                    this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0F, 1.0F);
+                    if (this.entity.level() instanceof ServerLevel sl) {
+                        sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, this.entity.getX(), this.entity.getY() + 1.0, this.entity.getZ(), 8, 0.3, 0.3, 0.3, 0.05);
+                    }
+                    player.sendSystemMessage(Component.literal("<" + this.entity.getDisplayName().getString() + "> I am heading to my Resident Hut bed!"));
+                } else {
+                    this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0F, 1.0F);
+                    player.sendSystemMessage(Component.literal("<" + this.entity.getDisplayName().getString() + "> I don't have an assigned Resident Hut bed yet!"));
+                }
+                return true;
+            }
+        }
+
+        if (command.equals("sethome")) {
+            if (this.entity instanceof AbstractEntityCitizen citizen) {
+                net.minecraft.core.BlockPos homePos = citizen.getCitizenData() != null ? citizen.getCitizenData().getBedPos() : null;
+                if (homePos == null || homePos.equals(net.minecraft.core.BlockPos.ZERO)) {
+                    homePos = citizen.getEntityData().get(AbstractEntityCitizen.DATA_BED_POS);
+                }
+                if (homePos != null && !homePos.equals(net.minecraft.core.BlockPos.ZERO)) {
+                    this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0F, 1.0F);
+                    player.sendSystemMessage(Component.literal("<" + this.entity.getDisplayName().getString() + "> My home is my assigned Resident Hut at " + homePos.getX() + ", " + homePos.getY() + ", " + homePos.getZ() + "."));
+                } else {
+                    this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0F, 1.0F);
+                    player.sendSystemMessage(Component.literal("<" + this.entity.getDisplayName().getString() + "> I don't have an assigned Resident Hut yet!"));
+                }
+                return true;
+            }
         }
 
         // 2. Pick up child / baby
@@ -150,15 +206,36 @@ public class CitizenCommandHandler extends EntityCommandHandler {
         VillagerBrain<?> brain = vl.getVillagerBrain();
         Memories memories = brain.getMemoriesForPlayer(player);
         int currentHearts = memories.getHearts();
+        int fatigue = memories.getInteractionFatigue();
+
+        // 1. Fatigue limit check (aligned with MCA Reborn dialogue fatigue)
+        if (fatigue >= 4) {
+            memories.modHearts(-2);
+            memories.modInteractionFatigue(1);
+            this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0F, 1.0F);
+            if (this.entity.level() instanceof ServerLevel sl) {
+                sl.sendParticles(ParticleTypes.ANGRY_VILLAGER, this.entity.getX(), this.entity.getEyeY() + 0.5, this.entity.getZ(), 5, 0.3, 0.3, 0.3, 0.1);
+            }
+            MutableComponent reply = Component.translatable("dialogue.chat.fail");
+            player.sendSystemMessage(Component.literal("<" + this.entity.getDisplayName().getString() + "> ").append(reply));
+            Network.sendToPlayer(new InteractionDialogueQuestionResponse(reply, false), player);
+            return true;
+        }
+
+        // Increment fatigue on interaction attempt
+        memories.modInteractionFatigue(1);
 
         boolean isFlirtOrKiss = command.equals("flirt") || command.equals("kiss");
-        boolean success;
+        float baseChance = isFlirtOrKiss ? 0.75F : 0.85F;
+        float fatiguePenalty = fatigue * 0.12F;
+        float finalChance = Math.max(0.15F, baseChance - fatiguePenalty);
 
+        boolean success;
         if (isFlirtOrKiss) {
             int minHearts = command.equals("kiss") ? 50 : 25;
-            success = currentHearts >= minHearts && this.entity.getRandom().nextFloat() < 0.75F;
+            success = currentHearts >= minHearts && this.entity.getRandom().nextFloat() < finalChance;
         } else {
-            success = this.entity.getRandom().nextFloat() < 0.85F;
+            success = this.entity.getRandom().nextFloat() < finalChance;
         }
 
         if (success) {

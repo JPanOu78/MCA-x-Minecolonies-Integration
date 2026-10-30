@@ -11,10 +11,14 @@ import com.minecolonies.core.client.render.RenderUtils;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import net.conczin.mca.client.render.layer.FaceLayer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.EntityModelSet;
 import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -41,6 +45,11 @@ public class CitizenMCARenderer {
     private static ItemInHandLayer<AbstractEntityCitizen, CitizenMCAModel> defaultItemLayer;
     private static ItemInHandLayer<AbstractEntityCitizen, CitizenMCAModel> slimItemLayer;
 
+    private static HumanoidModel<AbstractEntityCitizen> defaultFaceModel;
+    private static HumanoidModel<AbstractEntityCitizen> slimFaceModel;
+    private static FaceLayer<AbstractEntityCitizen, HumanoidModel<AbstractEntityCitizen>> defaultFaceLayer;
+    private static FaceLayer<AbstractEntityCitizen, HumanoidModel<AbstractEntityCitizen>> slimFaceLayer;
+
     public static synchronized void ensureModelsInitialized() {
         if (defaultModel == null) {
             EntityModelSet modelSet = Minecraft.getInstance().getEntityModels();
@@ -62,6 +71,40 @@ public class CitizenMCARenderer {
 
                 defaultItemLayer = new ItemInHandLayer<>(defaultParent, itemInHandRenderer);
                 slimItemLayer = new ItemInHandLayer<>(slimParent, itemInHandRenderer);
+
+                defaultFaceModel = new HumanoidModel<>(
+                    LayerDefinition.create(PlayerModel.createMesh(new CubeDeformation(0.01F), false), 64, 64).bakeRoot()
+                );
+                slimFaceModel = new HumanoidModel<>(
+                    LayerDefinition.create(PlayerModel.createMesh(new CubeDeformation(0.01F), true), 64, 64).bakeRoot()
+                );
+
+                RenderLayerParent<AbstractEntityCitizen, HumanoidModel<AbstractEntityCitizen>> defaultFaceParent = new RenderLayerParent<>() {
+                    @Override
+                    public HumanoidModel<AbstractEntityCitizen> getModel() {
+                        return defaultModel;
+                    }
+
+                    @Override
+                    public ResourceLocation getTextureLocation(AbstractEntityCitizen entity) {
+                        return CitizenAppearance.getAppearance(entity).getBaseSkinTexture();
+                    }
+                };
+
+                RenderLayerParent<AbstractEntityCitizen, HumanoidModel<AbstractEntityCitizen>> slimFaceParent = new RenderLayerParent<>() {
+                    @Override
+                    public HumanoidModel<AbstractEntityCitizen> getModel() {
+                        return slimModel;
+                    }
+
+                    @Override
+                    public ResourceLocation getTextureLocation(AbstractEntityCitizen entity) {
+                        return CitizenAppearance.getAppearance(entity).getBaseSkinTexture();
+                    }
+                };
+
+                defaultFaceLayer = new FaceLayer<>(defaultFaceParent, defaultFaceModel, "normal");
+                slimFaceLayer = new FaceLayer<>(slimFaceParent, slimFaceModel, "normal");
             }
         }
     }
@@ -204,20 +247,26 @@ public class CitizenMCARenderer {
         VertexConsumer skinConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(skinTexture));
         model.renderToBuffer(poseStack, skinConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
 
-        // 2. Render Face / Expression Layer (Head only)
-        model.setAllVisible(false);
-        model.head.visible = true;
-        ResourceLocation faceTexture = appearance.getFaceTexture();
-        VertexConsumer faceConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(faceTexture));
-        model.renderToBuffer(poseStack, faceConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+        // 2. Render Face / Expression Layer (Head only, native MCA sclera/iris/details and blinking)
+        FaceLayer<AbstractEntityCitizen, HumanoidModel<AbstractEntityCitizen>> faceLayer =
+                appearance.isSlimModel() ? slimFaceLayer : defaultFaceLayer;
+        if (faceLayer != null) {
+            faceLayer.render(poseStack, buffer, packedLight, entity, limbSwing, limbSwingAmount, partialTicks, ageInTicks, netHeadYaw, headPitch);
+        }
 
         // 3. Render Hair Layer with Hair Color Tinting (Head and Hat only)
         model.setAllVisible(false);
         model.head.visible = true;
         model.hat.visible = true;
+        model.head.xScale *= 1.01F;
+        model.head.yScale *= 1.01F;
+        model.head.zScale *= 1.01F;
         ResourceLocation hairTexture = appearance.getHairTexture();
         VertexConsumer hairConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(hairTexture));
         model.renderToBuffer(poseStack, hairConsumer, packedLight, OverlayTexture.NO_OVERLAY, appearance.getHairColor());
+        model.head.xScale /= 1.01F;
+        model.head.yScale /= 1.01F;
+        model.head.zScale /= 1.01F;
 
         // 4. Render Job/Clothing Layer (Body, limbs, and outer clothing; hide head/hat)
         model.setAllVisible(true);

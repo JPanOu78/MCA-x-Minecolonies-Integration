@@ -81,13 +81,13 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
             this.mcaminecolonies$genetics.setGender(citizen.isFemale() ? Gender.FEMALE : Gender.MALE);
 
-            // Set tracked age state
-            if (this.getTrackedValue(VillagerLike.AGE_STATE) == AgeState.UNASSIGNED) {
-                this.setTrackedValue(VillagerLike.AGE_STATE, citizen.isBaby() ? AgeState.BABY : AgeState.ADULT);
+            // Set tracked age state (walking child citizens use CHILD, adults use ADULT)
+            if (this.getTrackedValue(VillagerLike.AGE_STATE) == AgeState.UNASSIGNED || this.getTrackedValue(VillagerLike.AGE_STATE) == AgeState.BABY) {
+                this.setTrackedValue(VillagerLike.AGE_STATE, citizen.isBaby() ? AgeState.CHILD : AgeState.ADULT);
             }
 
-            // Randomize clothes and hair if empty so models and Villager Editor preview render completely
-            if (this.getClothes() == null || this.getClothes().isEmpty()) {
+            // Randomize clothes and hair if empty or if previously assigned baby diaper clothing
+            if (this.getClothes() == null || this.getClothes().isEmpty() || this.getClothes().contains("/baby/")) {
                 try {
                     this.randomizeClothes();
                 } catch (Exception ignored) {

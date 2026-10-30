@@ -22,6 +22,7 @@ public class CitizenMCAData {
     private String personality;
     private int hearts;
     private boolean isCustomized;
+    private UUID followTarget;
 
     public static final int DEFAULT_HAIR_COLOR = 0xFF4A2A18; // Natural Brown
     public static final int[] NATURAL_HAIR_COLORS = {
@@ -57,7 +58,7 @@ public class CitizenMCAData {
         int seed2 = (int) Math.abs(msb % 1000000009L);
 
         data.setSkinIndex(seed1 % 5);
-        data.setFaceIndex(seed2 % 22);
+        data.setFaceIndex(seed2 % 11);
         data.setHairIndex((seed1 / 7) % 40);
         data.setHairColor(NATURAL_HAIR_COLORS[(seed2 / 13) % NATURAL_HAIR_COLORS.length]);
         data.setClothingIndex((seed2 / 11) % 10);
@@ -89,6 +90,7 @@ public class CitizenMCAData {
         tag.putString("Personality", this.personality);
         tag.putInt("Hearts", this.hearts);
         tag.putBoolean("IsCustomized", this.isCustomized);
+        if (this.followTarget != null) tag.putUUID("FollowTarget", this.followTarget);
         return tag;
     }
 
@@ -109,6 +111,7 @@ public class CitizenMCAData {
         data.personality = tag.contains("Personality") ? tag.getString("Personality") : "friendly";
         data.hearts = tag.contains("Hearts") ? tag.getInt("Hearts") : 50;
         data.isCustomized = tag.getBoolean("IsCustomized");
+        if (tag.hasUUID("FollowTarget")) data.followTarget = tag.getUUID("FollowTarget");
         return data;
     }
 
@@ -153,7 +156,7 @@ public class CitizenMCAData {
     }
 
     public void setFaceIndex(int faceIndex) {
-        this.faceIndex = (faceIndex % 22 + 22) % 22;
+        this.faceIndex = (faceIndex % 11 + 11) % 11;
     }
 
     public int getHairColor() {
@@ -214,6 +217,14 @@ public class CitizenMCAData {
 
     public void setCustomized(boolean customized) {
         this.isCustomized = customized;
+    }
+
+    public UUID getFollowTarget() {
+        return followTarget;
+    }
+
+    public void setFollowTarget(UUID followTarget) {
+        this.followTarget = followTarget;
     }
 
     public CitizenAgeState getAgeState(boolean isMinecoloniesChild) {

@@ -50,7 +50,7 @@ public class CitizenAppearance {
         this.hairIndex = data.getHairIndex();
         this.clothingIndex = data.getClothingIndex();
 
-        this.customClothes = (vClothes != null && !vClothes.isEmpty()) ? vClothes : null;
+        this.customClothes = (vClothes != null && !vClothes.isEmpty() && !vClothes.contains("/baby/")) ? vClothes : null;
         this.customHair = (vHair != null && !vHair.isEmpty()) ? vHair : null;
 
         if (vHairDye != 0 && vHairDye != -16777216) {
@@ -89,10 +89,9 @@ public class CitizenAppearance {
     }
 
     public ResourceLocation getFaceTexture() {
-        String genderDir = isFemale ? "female" : "male";
         return ResourceLocation.fromNamespaceAndPath(
             "mca",
-            "skins/face/normal/" + genderDir + "/" + (faceIndex % 22) + ".png"
+            "skins/face/normal/" + (faceIndex % 11) + ".png"
         );
     }
 

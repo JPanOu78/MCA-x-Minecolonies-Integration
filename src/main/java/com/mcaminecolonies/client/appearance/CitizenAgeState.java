@@ -58,11 +58,7 @@ public enum CitizenAgeState {
         if (!isMinecoloniesChild) {
             return ADULT;
         }
-        if (age < TODDLER.minAge) {
-            return BABY;
-        } else if (age < CHILD.minAge) {
-            return TODDLER;
-        } else if (age < TEEN.minAge) {
+        if (age < TEEN.minAge) {
             return CHILD;
         } else {
             return TEEN;

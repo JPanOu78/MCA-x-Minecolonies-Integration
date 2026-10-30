@@ -2,13 +2,18 @@ package com.mcaminecolonies.data;
 
 import com.mcaminecolonies.client.appearance.CitizenAgeState;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
+import net.conczin.mca.entity.VillagerLike;
+import net.conczin.mca.entity.ai.Memories;
+import net.conczin.mca.entity.ai.MoveState;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -43,6 +48,44 @@ public class CitizenMCAManager {
         if (citizen.tickCount % 20 != 0) return;
 
         CitizenMCAData data = getData(citizen);
+
+        // Active Follow and Stay movement handling
+        if (citizen instanceof VillagerLike<?> vl) {
+            MoveState moveState = vl.getVillagerBrain().getMoveState();
+            if (moveState == MoveState.FOLLOW) {
+                ServerPlayer followPlayer = null;
+                if (data.getFollowTarget() != null) {
+                    followPlayer = (ServerPlayer) citizen.level().getPlayerByUUID(data.getFollowTarget());
+                }
+                if (followPlayer == null) {
+                    List<ServerPlayer> nearby = citizen.level().getEntitiesOfClass(ServerPlayer.class, citizen.getBoundingBox().inflate(16.0));
+                    if (!nearby.isEmpty()) {
+                        followPlayer = nearby.get(0);
+                    }
+                }
+                if (followPlayer != null && followPlayer.isAlive()) {
+                    double distSq = citizen.distanceToSqr(followPlayer);
+                    if (distSq > 400.0) { // > 20 blocks: teleport
+                        citizen.teleportTo(followPlayer.getX(), followPlayer.getY(), followPlayer.getZ());
+                    } else if (distSq > 9.0) { // > 3 blocks: pathfind
+                        citizen.getNavigation().moveTo(followPlayer, 1.15);
+                    }
+                }
+            } else if (moveState == MoveState.STAY) {
+                citizen.getNavigation().stop();
+            }
+
+            // Fatigue recovery: reduce interaction fatigue by 1 every 100 ticks (5 seconds) per MCA standard
+            if (citizen.tickCount % 100 == 0) {
+                for (ServerPlayer player : citizen.level().getEntitiesOfClass(ServerPlayer.class, citizen.getBoundingBox().inflate(32.0))) {
+                    Memories mem = vl.getVillagerBrain().getMemoriesForPlayer(player);
+                    if (mem != null && mem.getInteractionFatigue() > 0) {
+                        mem.modInteractionFatigue(-1);
+                    }
+                }
+            }
+        }
+
         boolean isChild = citizen.isBaby();
 
         if (isChild) {
