@@ -30,7 +30,7 @@ public abstract class MainWindowCitizenMixin extends AbstractWindowCitizen {
         // Do not display MainWindowCitizen for visitors (tavern visitors, wandering recruits, etc.)
         if (this.citizen instanceof com.minecolonies.api.colony.IVisitorViewData
                 || (this.citizen != null && this.citizen.getClass().getName().contains("Visitor"))) {
-            this.close();
+            Minecraft.getInstance().setScreen(null);
             ci.cancel();
             return;
         }
@@ -39,7 +39,7 @@ public abstract class MainWindowCitizenMixin extends AbstractWindowCitizen {
             Entity entity = Minecraft.getInstance().level.getEntity(this.citizen.getEntityId());
             if (entity != null && (entity instanceof com.minecolonies.core.entity.visitor.VisitorCitizen
                     || entity.getClass().getName().contains("Visitor"))) {
-                this.close();
+                Minecraft.getInstance().setScreen(null);
                 ci.cancel();
             }
         }

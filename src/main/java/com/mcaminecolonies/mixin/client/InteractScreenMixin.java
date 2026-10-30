@@ -1,6 +1,8 @@
 package com.mcaminecolonies.mixin.client;
 
+import net.conczin.mca.client.gui.AbstractDynamicScreen;
 import net.conczin.mca.client.gui.InteractScreen;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import org.spongepowered.asm.mixin.Mixin;
@@ -31,9 +33,6 @@ public abstract class InteractScreenMixin {
     @Shadow
     private String dialogQuestionId;
 
-    @Shadow
-    public abstract void setLayout(String layout);
-
     @Inject(method = "setLastPhrase", at = @At("HEAD"))
     private void mcaminecolonies$fixNullDialogAnswersOnLastPhrase(Component phrase, boolean playSound, CallbackInfo ci) {
         if (this.dialogAnswers == null) {
@@ -42,7 +41,7 @@ public abstract class InteractScreenMixin {
     }
 
     @Inject(method = "drawTextPopups", at = @At("HEAD"))
-    private void mcaminecolonies$ensureDialogAnswersNonNull(CallbackInfo ci) {
+    private void mcaminecolonies$ensureDialogAnswersNonNull(GuiGraphics guiGraphics, CallbackInfo ci) {
         if (this.dialogAnswers == null) {
             this.dialogAnswers = Collections.emptyList();
         }
@@ -58,7 +57,7 @@ public abstract class InteractScreenMixin {
                 this.dialogQuestionId = null;
                 this.dialogAnswers = Collections.emptyList();
                 this.dialogAnswerHover = null;
-                this.setLayout("interact");
+                ((AbstractDynamicScreen) (Object) this).setLayout("interact");
                 cir.setReturnValue(true);
             }
         }
