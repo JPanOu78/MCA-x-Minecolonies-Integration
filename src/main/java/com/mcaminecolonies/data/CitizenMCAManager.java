@@ -99,6 +99,10 @@ public class CitizenMCAManager {
                 data.setAge(CitizenAgeState.ADULT.getMinAge());
                 saveData(citizen, data);
 
+                if (citizen instanceof VillagerLike<?> vl) {
+                    vl.updateAttributes();
+                }
+
                 if (citizen.level() instanceof ServerLevel serverLevel) {
                     serverLevel.playSound(null, citizen.getX(), citizen.getY(), citizen.getZ(),
                             SoundEvents.PLAYER_LEVELUP, SoundSource.NEUTRAL, 1.0F, 1.0F);
@@ -116,9 +120,14 @@ public class CitizenMCAManager {
                 return;
             }
 
-            // If age stage changed (e.g. Baby -> Toddler, Toddler -> Child, Child -> Teen)
+            // If age stage changed (e.g. Toddler -> Child, Child -> Teen)
             if (oldState != newState) {
                 saveData(citizen, data);
+
+                if (citizen instanceof VillagerLike<?> vl) {
+                    vl.updateAttributes();
+                }
+
                 if (citizen.level() instanceof ServerLevel serverLevel) {
                     serverLevel.playSound(null, citizen.getX(), citizen.getY(), citizen.getZ(),
                             SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0F, 1.2F);

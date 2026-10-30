@@ -19,6 +19,8 @@ public class CitizenMCAData {
     private int clothingIndex;
     private String customSkin;
     private int skinDye = -16777216;
+    private float melanin = 0.5F;
+    private float hemoglobin = 0.5F;
     private String customClothes;
     private String customHair;
     private String personality;
@@ -89,6 +91,8 @@ public class CitizenMCAData {
         tag.putInt("ClothingIndex", this.clothingIndex);
         if (this.customSkin != null) tag.putString("CustomSkin", this.customSkin);
         tag.putInt("SkinDye", this.skinDye);
+        tag.putFloat("Melanin", this.melanin);
+        tag.putFloat("Hemoglobin", this.hemoglobin);
         if (this.customClothes != null) tag.putString("CustomClothes", this.customClothes);
         if (this.customHair != null) tag.putString("CustomHair", this.customHair);
         tag.putString("Personality", this.personality);
@@ -112,6 +116,8 @@ public class CitizenMCAData {
         data.clothingIndex = tag.getInt("ClothingIndex");
         if (tag.contains("CustomSkin")) data.customSkin = tag.getString("CustomSkin");
         if (tag.contains("SkinDye")) data.skinDye = tag.getInt("SkinDye");
+        if (tag.contains("Melanin")) data.melanin = tag.getFloat("Melanin");
+        if (tag.contains("Hemoglobin")) data.hemoglobin = tag.getFloat("Hemoglobin");
         if (tag.contains("CustomClothes")) data.customClothes = tag.getString("CustomClothes");
         if (tag.contains("CustomHair")) data.customHair = tag.getString("CustomHair");
         data.personality = tag.contains("Personality") ? tag.getString("Personality") : "friendly";
@@ -162,7 +168,23 @@ public class CitizenMCAData {
     }
 
     public void setFaceIndex(int faceIndex) {
-        this.faceIndex = (faceIndex % 11 + 11) % 11;
+        this.faceIndex = (faceIndex % 22 + 22) % 22;
+    }
+
+    public float getMelanin() {
+        return melanin;
+    }
+
+    public void setMelanin(float melanin) {
+        this.melanin = Math.clamp(melanin, 0.0F, 1.0F);
+    }
+
+    public float getHemoglobin() {
+        return hemoglobin;
+    }
+
+    public void setHemoglobin(float hemoglobin) {
+        this.hemoglobin = Math.clamp(hemoglobin, 0.0F, 1.0F);
     }
 
     public int getHairColor() {

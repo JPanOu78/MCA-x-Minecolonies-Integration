@@ -41,9 +41,10 @@ public class CitizenAppearance {
         String vHair = null;
         int vHairDye = 0;
         int vSkinIndex = data.getSkinIndex();
+        int vFaceIndex = data.getFaceIndex();
         float albinismMultiplier = 1.0F;
-        float melanin = 0.5F;
-        float hemoglobin = 0.5F;
+        float melanin = data.getMelanin();
+        float hemoglobin = data.getHemoglobin();
         float infection = 0.0F;
 
         if (citizen instanceof VillagerLike<?> vl) {
@@ -55,15 +56,27 @@ public class CitizenAppearance {
             }
             if (vl.getGenetics() != null) {
                 float skinGene = vl.getGenetics().getGene(Genetics.SKIN);
-                vSkinIndex = (int) Math.min(4.0F, Math.max(0.0F, skinGene * 5.0F));
-                melanin = vl.getGenetics().getGene(Genetics.MELANIN) * albinismMultiplier;
-                hemoglobin = vl.getGenetics().getGene(Genetics.HEMOGLOBIN) * albinismMultiplier;
+                if (skinGene > 0.0F) {
+                    vSkinIndex = (int) Math.min(4.0F, Math.max(0.0F, skinGene * 5.0F));
+                }
+                float faceGene = vl.getGenetics().getGene(Genetics.FACE);
+                if (faceGene > 0.0F) {
+                    vFaceIndex = (int) Math.min(21.0F, Math.max(0.0F, faceGene * 22.0F));
+                }
+                float mGene = vl.getGenetics().getGene(Genetics.MELANIN);
+                if (mGene > 0.0F) {
+                    melanin = mGene * albinismMultiplier;
+                }
+                float hGene = vl.getGenetics().getGene(Genetics.HEMOGLOBIN);
+                if (hGene > 0.0F) {
+                    hemoglobin = hGene * albinismMultiplier;
+                }
             }
             infection = vl.getInfectionProgress();
         }
 
         this.skinIndex = vSkinIndex;
-        this.faceIndex = data.getFaceIndex();
+        this.faceIndex = vFaceIndex;
         this.hairIndex = data.getHairIndex();
         this.clothingIndex = data.getClothingIndex();
 
@@ -130,10 +143,15 @@ public class CitizenAppearance {
         );
     }
 
-    public ResourceLocation getFaceTexture() {
+    public ResourceLocation getFaceTexture(AbstractEntityCitizen entity) {
+        String genderDir = isFemale ? "female" : "male";
+        int faceIdx = (faceIndex % 22 + 22) % 22;
+        int seed = (entity.tickCount / 2) + Math.abs(entity.getUUID().hashCode() % 1000);
+        boolean blink = (seed % 50 == 1 || seed % 57 == 1) || entity.isSleeping() || entity.isDeadOrDying();
+        String suffix = blink ? "_blink" : "";
         return ResourceLocation.fromNamespaceAndPath(
             "mca",
-            "skins/face/normal/" + (faceIndex % 11) + ".png"
+            "skins/face/normal/" + genderDir + "/" + faceIdx + suffix + ".png"
         );
     }
 

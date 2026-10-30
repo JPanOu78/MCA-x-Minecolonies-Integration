@@ -48,8 +48,19 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             SynchedEntityData.defineId(AbstractEntityCitizen.class, EntityDataSerializers.COMPOUND_TAG);
 
     @Unique
-    private static final CDataManager MCAMINECOLONIES$DATA_MANAGER =
-            VillagerLike.createTrackedData(AbstractEntityCitizen.class).build();
+    private static final CDataManager MCAMINECOLONIES$DATA_MANAGER;
+
+    @Unique
+    private static final net.minecraft.resources.ResourceLocation MCAMINECOLONIES$AGE_SPEED_ID =
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mcaminecolonies", "age_speed_modifier");
+
+    static {
+        CDataManager.Builder<AbstractEntityCitizen> builder =
+                VillagerLike.createTrackedData(AbstractEntityCitizen.class);
+        Genetics.createTrackedData(builder);
+        Traits.createTrackedData(builder);
+        MCAMINECOLONIES$DATA_MANAGER = builder.build();
+    }
 
     @Unique
     private Relationship<AbstractEntityCitizenMixin> mcaminecolonies$relations;
@@ -122,6 +133,9 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
     @Inject(method = "aiStep", at = @At("TAIL"))
     private void mcaminecolonies$aiStep(CallbackInfo ci) {
         CitizenMCAManager.tickCitizen((AbstractEntityCitizen) (Object) this);
+        if (this.tickCount % 100 == 0) {
+            this.updateAttributes();
+        }
     }
 
     @Override
@@ -172,15 +186,18 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
 
     @Override
     public AgeState getAgeState() {
-        AgeState state = (AgeState) this.getTrackedValue(VillagerLike.AGE_STATE);
-        if (state == null || state == AgeState.UNASSIGNED) {
-            AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
-            return citizen.isBaby() ? AgeState.CHILD : AgeState.ADULT;
+        AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
+        CitizenMCAData data = CitizenMCAManager.getData(citizen);
+        if (data != null) {
+            com.mcaminecolonies.client.appearance.CitizenAgeState state = data.getAgeState(citizen.isBaby());
+            return switch (state) {
+                case BABY, TODDLER -> AgeState.TODDLER;
+                case CHILD -> AgeState.CHILD;
+                case TEEN -> AgeState.TEEN;
+                case ADULT -> AgeState.ADULT;
+            };
         }
-        if (state == AgeState.BABY) {
-            return AgeState.CHILD;
-        }
-        return state;
+        return citizen.isBaby() ? AgeState.CHILD : AgeState.ADULT;
     }
 
     @Override
@@ -211,16 +228,72 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
 
         AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
         CitizenMCAData data = CitizenMCAManager.getData(citizen);
-        if (tag.contains("Clothes")) data.setCustomClothes(tag.getString("Clothes"));
-        if (tag.contains("Hair")) data.setCustomHair(tag.getString("Hair"));
-        if (tag.contains("Skin")) data.setCustomSkin(tag.getString("Skin"));
-        if (tag.contains("SkinDye")) data.setSkinDye(tag.getInt("SkinDye"));
-        int hairDye = this.getHairDye();
-        if (hairDye != 0 && hairDye != -16777216) data.setHairColor(hairDye);
-        if (tag.contains("Gender")) {
+
+        if (tag.contains("Clothes", 8)) data.setCustomClothes(tag.getString("Clothes"));
+        if (tag.contains("Hair", 8)) data.setCustomHair(tag.getString("Hair"));
+        if (tag.contains("Skin", 8)) {
+            data.setCustomSkin(tag.getString("Skin"));
+        } else if (tag.contains("Skin", 99)) {
+            float skinGene = tag.getFloat("Skin");
+            int sIdx = (int) Math.min(4.0F, Math.max(0.0F, skinGene * 5.0F));
+            data.setSkinIndex(sIdx);
+            data.setCustomSkin(null);
+            if (this.mcaminecolonies$genetics != null) {
+                this.mcaminecolonies$genetics.setGene(Genetics.SKIN, skinGene);
+            }
+        }
+
+        if (tag.contains("Face", 99)) {
+            float faceGene = tag.getFloat("Face");
+            int fIdx = (int) Math.min(21.0F, Math.max(0.0F, faceGene * 22.0F));
+            data.setFaceIndex(fIdx);
+            if (this.mcaminecolonies$genetics != null) {
+                this.mcaminecolonies$genetics.setGene(Genetics.FACE, faceGene);
+            }
+        }
+
+        if (tag.contains("Melanin", 99)) {
+            float m = tag.getFloat("Melanin");
+            data.setMelanin(m);
+            if (this.mcaminecolonies$genetics != null) {
+                this.mcaminecolonies$genetics.setGene(Genetics.MELANIN, m);
+            }
+        }
+
+        if (tag.contains("Hemoglobin", 99)) {
+            float h = tag.getFloat("Hemoglobin");
+            data.setHemoglobin(h);
+            if (this.mcaminecolonies$genetics != null) {
+                this.mcaminecolonies$genetics.setGene(Genetics.HEMOGLOBIN, h);
+            }
+        }
+
+        if (tag.contains("SkinDye", 99)) data.setSkinDye(tag.getInt("SkinDye"));
+
+        if (tag.contains("HairColorRed", 99) && tag.contains("HairColorGreen", 99) && tag.contains("HairColorBlue", 99)) {
+            int r = Math.round(tag.getFloat("HairColorRed") * 255.0F) & 0xFF;
+            int g = Math.round(tag.getFloat("HairColorGreen") * 255.0F) & 0xFF;
+            int b = Math.round(tag.getFloat("HairColorBlue") * 255.0F) & 0xFF;
+            data.setHairColor(0xFF000000 | (r << 16) | (g << 8) | b);
+        } else {
+            int hairDye = this.getHairDye();
+            if (hairDye != 0 && hairDye != -16777216) data.setHairColor(hairDye);
+        }
+
+        if (tag.contains("Gender", 99)) {
+            boolean female = (tag.getInt("Gender") == Gender.FEMALE.ordinal());
+            data.setFemale(female);
+            if (this.mcaminecolonies$genetics != null) {
+                this.mcaminecolonies$genetics.setGender(female ? Gender.FEMALE : Gender.MALE);
+            }
+        } else if (tag.contains("Gender", 8)) {
             boolean female = "FEMALE".equalsIgnoreCase(tag.getString("Gender"));
             data.setFemale(female);
+            if (this.mcaminecolonies$genetics != null) {
+                this.mcaminecolonies$genetics.setGender(female ? Gender.FEMALE : Gender.MALE);
+            }
         }
+
         data.setCustomized(true);
         CitizenMCAManager.saveData(citizen, data);
     }
@@ -233,11 +306,24 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
 
     @Override
     public void updateAttributes() {
-        // Suppress MCA's speed modifiers to prevent abrupt rushing or dashing bursts.
-        // MineColonies manages citizen navigation and movement speed independently.
         var attr = this.getAttribute(Attributes.MOVEMENT_SPEED);
         if (attr != null) {
             attr.removeModifier(VillagerLike.SPEED_ID);
+            attr.removeModifier(MCAMINECOLONIES$AGE_SPEED_ID);
+
+            AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
+            CitizenMCAData data = CitizenMCAManager.getData(citizen);
+            if (data != null && citizen.isBaby()) {
+                com.mcaminecolonies.client.appearance.CitizenAgeState state = data.getAgeState(true);
+                float speedMultiplier = state.getSpeedMultiplier();
+                if (Math.abs(speedMultiplier - 1.0F) > 0.01F) {
+                    attr.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                            MCAMINECOLONIES$AGE_SPEED_ID,
+                            speedMultiplier - 1.0F,
+                            net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE
+                    ));
+                }
+            }
         }
     }
 
