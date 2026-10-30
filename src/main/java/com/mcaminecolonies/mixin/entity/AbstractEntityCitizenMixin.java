@@ -1,5 +1,6 @@
 package com.mcaminecolonies.mixin.entity;
 
+import com.mcaminecolonies.client.appearance.CitizenAgeState;
 import com.mcaminecolonies.data.CitizenMCAData;
 import com.mcaminecolonies.data.CitizenMCAManager;
 import com.mcaminecolonies.data.IMCAEntityCitizen;
@@ -239,6 +240,12 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             tag.put("MCAColoniesData", data.toNbt());
             if (data.getCustomSkin() != null) tag.putString("Skin", data.getCustomSkin());
             tag.putInt("SkinDye", data.getSkinDye());
+            AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
+            int mcaAge = citizen.isBaby()
+                    ? (int) (((float) data.getAge() / (float) CitizenAgeState.ADULT.getMinAge() - 1.0F) * AgeState.getMaxAge())
+                    : 0;
+            tag.putInt("Age", mcaAge);
+            tag.putInt("AgeState", this.getAgeState().ordinal());
         }
     }
 
@@ -254,6 +261,75 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
 
         AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
         CitizenMCAData data = CitizenMCAManager.getData(citizen);
+
+        if (tag.contains("Age", 99)) {
+            int ageVal = tag.getInt("Age");
+            boolean isBaby = ageVal < 0;
+            citizen.setIsChild(isBaby);
+            citizen.getEntityData().set(AbstractEntityCitizen.DATA_IS_CHILD, isBaby);
+            if (citizen.getCitizenData() != null) {
+                citizen.getCitizenData().setIsChild(isBaby);
+            }
+            if (isBaby) {
+                float progress = 1.0F + (float) ageVal / (float) AgeState.getMaxAge();
+                progress = Math.clamp(progress, 0.0F, 0.99F);
+                int citizenAge = (int) (progress * CitizenAgeState.ADULT.getMinAge());
+                data.setAge(citizenAge);
+            } else {
+                data.setAge(CitizenAgeState.ADULT.getMinAge());
+            }
+            AgeState mcaAgeState = AgeState.byCurrentAge(ageVal);
+            this.setTrackedValue(VillagerLike.AGE_STATE, mcaAgeState);
+            this.refreshDimensions();
+            this.updateAttributes();
+        } else if (tag.contains("AgeState", 99)) {
+            int asIdx = tag.getInt("AgeState");
+            AgeState state = AgeState.byId(asIdx);
+            boolean isBaby = (state != AgeState.ADULT && state != AgeState.UNASSIGNED);
+            citizen.setIsChild(isBaby);
+            citizen.getEntityData().set(AbstractEntityCitizen.DATA_IS_CHILD, isBaby);
+            if (citizen.getCitizenData() != null) {
+                citizen.getCitizenData().setIsChild(isBaby);
+            }
+            if (isBaby) {
+                data.setAge(switch (state) {
+                    case BABY, TODDLER -> 1000;
+                    case CHILD -> 8000;
+                    case TEEN -> 14000;
+                    default -> 0;
+                });
+            } else {
+                data.setAge(CitizenAgeState.ADULT.getMinAge());
+            }
+            this.setTrackedValue(VillagerLike.AGE_STATE, state);
+            this.refreshDimensions();
+            this.updateAttributes();
+        } else if (tag.contains("AgeState", 8)) {
+            String asStr = tag.getString("AgeState");
+            try {
+                AgeState state = AgeState.valueOf(asStr.toUpperCase());
+                boolean isBaby = (state != AgeState.ADULT && state != AgeState.UNASSIGNED);
+                citizen.setIsChild(isBaby);
+                citizen.getEntityData().set(AbstractEntityCitizen.DATA_IS_CHILD, isBaby);
+                if (citizen.getCitizenData() != null) {
+                    citizen.getCitizenData().setIsChild(isBaby);
+                }
+                if (isBaby) {
+                    data.setAge(switch (state) {
+                        case BABY, TODDLER -> 1000;
+                        case CHILD -> 8000;
+                        case TEEN -> 14000;
+                        default -> 0;
+                    });
+                } else {
+                    data.setAge(CitizenAgeState.ADULT.getMinAge());
+                }
+                this.setTrackedValue(VillagerLike.AGE_STATE, state);
+                this.refreshDimensions();
+                this.updateAttributes();
+            } catch (Exception ignored) {
+            }
+        }
 
         if (tag.contains("Clothes", 8)) {
             String clothes = tag.getString("Clothes");

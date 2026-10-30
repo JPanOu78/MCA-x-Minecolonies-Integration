@@ -233,18 +233,6 @@ public class CitizenMCARenderer {
         model.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
         model.applyAgeProportions(ageState);
 
-        boolean isFemale = appearance.isFemale();
-        boolean isAdult = !entity.isBaby();
-        if (entity instanceof VillagerLike<?> vl) {
-            isFemale = vl.getGenetics().getGender() == Gender.FEMALE;
-        }
-        try {
-            if (Config.getInstance() != null && !Config.getInstance().enableBoobs) {
-                isFemale = false;
-            }
-        } catch (Throwable ignored) {
-        }
-
         // 1. Render Base Human Skin Layer (Body and limbs; hide outer clothing layers)
         model.setAllVisible(true);
         model.hat.visible = false;
@@ -253,8 +241,6 @@ public class CitizenMCARenderer {
         model.rightSleeve.visible = false;
         model.leftPants.visible = false;
         model.rightPants.visible = false;
-        model.breasts.visible = isFemale && isAdult;
-        model.breastsWear.visible = false;
 
         ResourceLocation skinTexture = appearance.getBaseSkinTexture();
         if (textureExists(skinTexture)) {
@@ -271,8 +257,6 @@ public class CitizenMCARenderer {
         model.setAllVisible(true);
         model.head.visible = false;
         model.hat.visible = false;
-        model.breasts.visible = false;
-        model.breastsWear.visible = isFemale && isAdult;
 
         ResourceLocation clothingTexture = appearance.getClothingTexture(jobName);
         if (textureExists(clothingTexture)) {
@@ -284,8 +268,6 @@ public class CitizenMCARenderer {
         model.setAllVisible(false);
         model.head.visible = true;
         model.hat.visible = true;
-        model.breasts.visible = false;
-        model.breastsWear.visible = false;
         model.head.xScale *= 1.03F;
         model.head.yScale *= 1.03F;
         model.head.zScale *= 1.03F;
@@ -333,8 +315,6 @@ public class CitizenMCARenderer {
 
         // Reset all parts visible for armor and held items
         model.setAllVisible(true);
-        model.breasts.visible = false;
-        model.breastsWear.visible = false;
 
         // 5. Render Citizen Armor Layer (Helmet, Chestplate, Leggings, Boots)
         if (armorLayer != null) {

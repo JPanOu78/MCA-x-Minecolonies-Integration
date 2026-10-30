@@ -6,7 +6,8 @@
   "refmap": "mcaminecolonies.refmap.json",
   "client": [
     "client.CitizenRendererMixin",
-    "client.MainWindowCitizenMixin"
+    "client.MainWindowCitizenMixin",
+    "client.InteractScreenMixin"
   ],
   "mixins": [
     "entity.AbstractEntityCitizenMixin",

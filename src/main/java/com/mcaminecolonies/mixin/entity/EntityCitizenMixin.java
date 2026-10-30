@@ -1,5 +1,6 @@
 package com.mcaminecolonies.mixin.entity;
 
+import com.mcaminecolonies.client.appearance.CitizenAgeState;
 import com.mcaminecolonies.data.CitizenMCAData;
 import com.mcaminecolonies.data.CitizenMCAManager;
 import com.mcaminecolonies.data.IMCAEntityCitizen;
@@ -7,6 +8,7 @@ import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import com.minecolonies.core.entity.citizen.EntityCitizen;
 import net.conczin.mca.entity.VillagerLike;
 import net.conczin.mca.entity.ai.Genetics;
+import net.conczin.mca.entity.ai.relationship.AgeState;
 import net.conczin.mca.resources.data.skin.LayeredHair;
 import net.conczin.mca.util.network.datasync.CDataManager;
 import net.minecraft.nbt.CompoundTag;
@@ -44,6 +46,15 @@ public abstract class EntityCitizenMixin {
             }
             if (vl.getAgeState() != null) {
                 tag.putInt("AgeState", vl.getAgeState().ordinal());
+            }
+            if (ent instanceof AbstractEntityCitizen cit) {
+                CitizenMCAData citData = CitizenMCAManager.getData(cit);
+                if (citData != null) {
+                    int mcaAge = cit.isBaby()
+                            ? (int) (((float) citData.getAge() / (float) CitizenAgeState.ADULT.getMinAge() - 1.0F) * AgeState.getMaxAge())
+                            : 0;
+                    tag.putInt("Age", mcaAge);
+                }
             }
             if (ent instanceof AbstractEntityCitizen cit && cit.getCustomName() != null) {
                 try {
@@ -104,6 +115,46 @@ public abstract class EntityCitizenMixin {
             if ((Object) this instanceof AbstractEntityCitizen citizen) {
                 try {
                     CitizenMCAData data = CitizenMCAManager.getData(citizen);
+
+                    if (tag.contains("Age", 99)) {
+                        int ageVal = tag.getInt("Age");
+                        boolean isBaby = ageVal < 0;
+                        citizen.setIsChild(isBaby);
+                        citizen.getEntityData().set(AbstractEntityCitizen.DATA_IS_CHILD, isBaby);
+                        if (citizen.getCitizenData() != null) {
+                            citizen.getCitizenData().setIsChild(isBaby);
+                        }
+                        if (isBaby) {
+                            float progress = 1.0F + (float) ageVal / (float) AgeState.getMaxAge();
+                            progress = Math.clamp(progress, 0.0F, 0.99F);
+                            int citizenAge = (int) (progress * CitizenAgeState.ADULT.getMinAge());
+                            data.setAge(citizenAge);
+                        } else {
+                            data.setAge(CitizenAgeState.ADULT.getMinAge());
+                        }
+                        AgeState mcaAgeState = AgeState.byCurrentAge(ageVal);
+                        vl.setAgeState(mcaAgeState);
+                    } else if (tag.contains("AgeState", 99)) {
+                        int asIdx = tag.getInt("AgeState");
+                        AgeState state = AgeState.byId(asIdx);
+                        boolean isBaby = (state != AgeState.ADULT && state != AgeState.UNASSIGNED);
+                        citizen.setIsChild(isBaby);
+                        citizen.getEntityData().set(AbstractEntityCitizen.DATA_IS_CHILD, isBaby);
+                        if (citizen.getCitizenData() != null) {
+                            citizen.getCitizenData().setIsChild(isBaby);
+                        }
+                        if (isBaby) {
+                            data.setAge(switch (state) {
+                                case BABY, TODDLER -> 1000;
+                                case CHILD -> 8000;
+                                case TEEN -> 14000;
+                                default -> 0;
+                            });
+                        } else {
+                            data.setAge(CitizenAgeState.ADULT.getMinAge());
+                        }
+                        vl.setAgeState(state);
+                    }
 
                     if (tag.contains("Skin", 8)) {
                         String skin = tag.getString("Skin");

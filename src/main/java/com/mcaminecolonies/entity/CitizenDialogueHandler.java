@@ -8,12 +8,19 @@ import net.conczin.mca.entity.VillagerLike;
 import net.conczin.mca.entity.ai.Memories;
 import net.conczin.mca.entity.ai.relationship.Gender;
 import net.conczin.mca.network.Network;
+import net.conczin.mca.network.s2c.InteractionDialogueQuestionResponse;
 import net.conczin.mca.network.s2c.InteractionDialogueResponse;
 import net.conczin.mca.registry.EntitiesMCA;
 import net.conczin.mca.resources.Dialogues;
 import net.conczin.mca.resources.data.dialogue.Answer;
 import net.conczin.mca.resources.data.dialogue.Question;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -72,20 +79,45 @@ public class CitizenDialogueHandler {
     }
 
     public static void handleInit(AbstractEntityCitizen citizen, ServerPlayer player) {
+        // Do not allow visitors to open MCA dialogue
+        if (citizen instanceof com.minecolonies.core.entity.visitor.VisitorCitizen
+                || citizen.getClass().getName().contains("Visitor")) {
+            return;
+        }
+
         CitizenMCAData data = CitizenMCAManager.getData(citizen);
         if (data != null && data.getFatigue() >= 4) {
             // Dialogue limit: citizen is exhausted from talking! Reject interaction
-            citizen.level().playSound(null, citizen.blockPosition(), net.minecraft.sounds.SoundEvents.VILLAGER_NO, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
-            if (citizen.level() instanceof net.minecraft.server.level.ServerLevel sl) {
-                sl.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER, citizen.getX(), citizen.getEyeY() + 0.5, citizen.getZ(), 5, 0.3, 0.3, 0.3, 0.1);
+            citizen.level().playSound(null, citizen.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0F, 1.0F);
+            if (citizen.level() instanceof ServerLevel sl) {
+                sl.sendParticles(ParticleTypes.ANGRY_VILLAGER, citizen.getX(), citizen.getEyeY() + 0.5, citizen.getZ(), 5, 0.3, 0.3, 0.3, 0.1);
             }
-            data.addHearts(-1);
+            data.addHearts(-2);
             data.modFatigue(1);
             CitizenMCAManager.saveData(citizen, data);
-            net.minecraft.network.chat.MutableComponent reply = net.minecraft.network.chat.Component.translatable("dialogue.chat.fail");
-            player.sendSystemMessage(net.minecraft.network.chat.Component.literal("<" + citizen.getDisplayName().getString() + "> ").append(reply));
-            Network.sendToPlayer(new net.conczin.mca.network.s2c.InteractionDialogueQuestionResponse(reply, false), player);
+            if (citizen instanceof VillagerLike<?> vl) {
+                Memories mem = vl.getVillagerBrain().getMemoriesForPlayer(player);
+                if (mem != null) {
+                    mem.modHearts(-2);
+                    mem.modInteractionFatigue(1);
+                }
+            }
+            MutableComponent reply = Component.translatable("dialogue.chat.fail");
+            player.sendSystemMessage(Component.literal("<" + citizen.getDisplayName().getString() + "> ").append(reply));
+            Network.sendToPlayer(new InteractionDialogueQuestionResponse(reply, false), player);
             return;
+        }
+
+        // Increment interaction fatigue on initiating chat
+        if (data != null) {
+            data.modFatigue(1);
+            CitizenMCAManager.saveData(citizen, data);
+            if (citizen instanceof VillagerLike<?> vl) {
+                Memories mem = vl.getVillagerBrain().getMemoriesForPlayer(player);
+                if (mem != null) {
+                    mem.modInteractionFatigue(1);
+                }
+            }
         }
 
         VillagerEntityMCA delegate = getOrCreateDelegate(citizen, player);
@@ -105,14 +137,41 @@ public class CitizenDialogueHandler {
     }
 
     public static void handleDialogue(AbstractEntityCitizen citizen, ServerPlayer player, String question, String answer) {
+        // Do not allow visitors to open MCA dialogue
+        if (citizen instanceof com.minecolonies.core.entity.visitor.VisitorCitizen
+                || citizen.getClass().getName().contains("Visitor")) {
+            return;
+        }
+
+        CitizenMCAData data = CitizenMCAManager.getData(citizen);
+        if (data != null && data.getFatigue() >= 4) {
+            citizen.level().playSound(null, citizen.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0F, 1.0F);
+            if (citizen.level() instanceof ServerLevel sl) {
+                sl.sendParticles(ParticleTypes.ANGRY_VILLAGER, citizen.getX(), citizen.getEyeY() + 0.5, citizen.getZ(), 5, 0.3, 0.3, 0.3, 0.1);
+            }
+            data.addHearts(-2);
+            data.modFatigue(1);
+            CitizenMCAManager.saveData(citizen, data);
+            if (citizen instanceof VillagerLike<?> vl) {
+                Memories mem = vl.getVillagerBrain().getMemoriesForPlayer(player);
+                if (mem != null) {
+                    mem.modHearts(-2);
+                    mem.modInteractionFatigue(1);
+                }
+            }
+            MutableComponent reply = Component.translatable("dialogue.chat.fail");
+            player.sendSystemMessage(Component.literal("<" + citizen.getDisplayName().getString() + "> ").append(reply));
+            Network.sendToPlayer(new InteractionDialogueQuestionResponse(reply, false), player);
+            return;
+        }
+
         VillagerEntityMCA delegate = getOrCreateDelegate(citizen, player);
 
-        // Also forward interaction command to citizen directly (for stay, follow, etc.)
+        // Forward interaction command to citizen directly (for stay, follow, etc.)
         if (citizen instanceof VillagerLike<?> vl) {
             vl.getInteractions().handle(player, answer);
         }
 
-        CitizenMCAData data = CitizenMCAManager.getData(citizen);
         if (data != null) {
             data.modFatigue(1);
             CitizenMCAManager.saveData(citizen, data);
@@ -141,4 +200,3 @@ public class CitizenDialogueHandler {
         }
     }
 }
-

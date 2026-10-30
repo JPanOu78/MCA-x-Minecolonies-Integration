@@ -194,6 +194,12 @@ public class CitizenCommandHandler extends EntityCommandHandler {
             return false;
         }
 
+        // Do not allow visitors to participate in MCA dialogue interactions
+        if (this.entity instanceof com.minecolonies.core.entity.visitor.VisitorCitizen
+                || this.entity.getClass().getName().contains("Visitor")) {
+            return false;
+        }
+
         VillagerBrain<?> brain = vl.getVillagerBrain();
         Memories memories = brain.getMemoriesForPlayer(player);
         int currentHearts = memories.getHearts();

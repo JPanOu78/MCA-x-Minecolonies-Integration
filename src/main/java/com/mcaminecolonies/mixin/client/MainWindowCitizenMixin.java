@@ -29,6 +29,19 @@ public abstract class MainWindowCitizenMixin extends AbstractWindowCitizen {
     private void mcaminecolonies$addTalkButton(CallbackInfo ci) {
         if (findPaneByID("mcaTalkButton") != null) return;
 
+        // Do not add MCA dialogue button for visitors (tavern visitors, wandering recruits, etc.)
+        if (this.citizen instanceof com.minecolonies.api.colony.IVisitorViewData) {
+            return;
+        }
+
+        if (Minecraft.getInstance().level != null && this.citizen != null) {
+            Entity entity = Minecraft.getInstance().level.getEntity(this.citizen.getEntityId());
+            if (entity != null && (entity instanceof com.minecolonies.core.entity.visitor.VisitorCitizen
+                    || entity.getClass().getName().contains("Visitor"))) {
+                return;
+            }
+        }
+
         ButtonImage talkButton = new ButtonImage();
         talkButton.setID("mcaTalkButton");
         talkButton.setSize(18, 18);

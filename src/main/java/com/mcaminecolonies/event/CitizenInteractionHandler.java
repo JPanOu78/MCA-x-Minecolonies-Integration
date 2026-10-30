@@ -38,6 +38,15 @@ public class CitizenInteractionHandler {
     public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
         if (!(event.getTarget() instanceof AbstractEntityCitizen citizen)) return;
 
+        // Do not intercept interactions on visitors (they must strictly show the MineColonies recruit interface)
+        if (citizen instanceof com.minecolonies.core.entity.visitor.VisitorCitizen
+                || citizen.getClass().getName().contains("Visitor")) {
+            return;
+        }
+        if (citizen.getCitizenData() != null && citizen.getCitizenData().getClass().getName().contains("Visitor")) {
+            return;
+        }
+
         Player player = event.getEntity();
         ItemStack held = event.getItemStack();
         InteractionHand hand = event.getHand();
