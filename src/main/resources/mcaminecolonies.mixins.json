@@ -11,7 +11,9 @@
   "mixins": [
     "entity.AbstractEntityCitizenMixin",
     "entity.EntityCitizenMixin",
-    "colony.ReproductionManagerMixin"
+    "colony.ReproductionManagerMixin",
+    "network.InteractionDialogueInitMixin",
+    "network.InteractionDialogueMessageMixin"
   ],
   "injectors": {
     "defaultRequire": 1

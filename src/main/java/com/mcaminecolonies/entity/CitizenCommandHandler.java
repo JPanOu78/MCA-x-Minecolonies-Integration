@@ -1,12 +1,39 @@
 package com.mcaminecolonies.entity;
 
+import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import net.conczin.mca.entity.VillagerLike;
+import net.conczin.mca.entity.ai.Memories;
+import net.conczin.mca.entity.ai.MoveState;
+import net.conczin.mca.entity.ai.brain.VillagerBrain;
+import net.conczin.mca.entity.ai.relationship.RelationshipState;
 import net.conczin.mca.entity.interaction.EntityCommandHandler;
+import net.conczin.mca.item.RelationshipItem;
+import net.conczin.mca.network.Network;
+import net.conczin.mca.network.s2c.InteractionDialogueQuestionResponse;
+import net.conczin.mca.registry.ItemsMCA;
+import net.conczin.mca.server.world.data.FamilyTree;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.server.world.data.PlayerSaveData;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.Saddleable;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
+
+import java.util.List;
+import java.util.Optional;
 
 /**
  * EntityCommandHandler implementation for MineColonies citizens interacting with MCA.
+ * Handles commands such as dialogue (chat, joke, flirt, hug, kiss, play), movement (follow, stay, move),
+ * gifts, rides, and marriage relationships.
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class CitizenCommandHandler extends EntityCommandHandler {
@@ -17,6 +44,151 @@ public class CitizenCommandHandler extends EntityCommandHandler {
 
     @Override
     public boolean handle(ServerPlayer player, String command) {
-        return false;
+        if (command == null || command.isEmpty()) {
+            return false;
+        }
+
+        // 1. Move commands (follow, stay, move)
+        Optional<MoveState> moveOpt = MoveState.byCommand(command);
+        if (moveOpt.isPresent() && this.entity instanceof VillagerLike<?> vl) {
+            MoveState state = moveOpt.get();
+            vl.getVillagerBrain().setMoveState(state, player);
+            this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0F, 1.0F);
+            if (state == MoveState.FOLLOW) {
+                player.sendSystemMessage(Component.translatable("mca.interaction.follow.success", this.entity.getDisplayName()));
+            } else if (state == MoveState.STAY) {
+                player.sendSystemMessage(Component.translatable("mca.interaction.stay.success", this.entity.getDisplayName()));
+            } else {
+                player.sendSystemMessage(Component.translatable("mca.interaction.move.success", this.entity.getDisplayName()));
+            }
+            return true;
+        }
+
+        // 2. Pick up child / baby
+        if (command.equals("pick_up")) {
+            if ((this.entity instanceof net.minecraft.world.entity.LivingEntity le && le.isBaby())
+                    || (this.entity instanceof VillagerLike<?> vl && vl.getAgeState() != net.conczin.mca.entity.ai.relationship.AgeState.ADULT)) {
+                this.entity.startRiding(player, true);
+                player.connection.send(new ClientboundSetPassengersPacket(player));
+                return true;
+            }
+        }
+
+        // 3. Mount or dismount horse
+        if (command.equals("ridehorse")) {
+            if (this.entity.isPassenger()) {
+                this.entity.stopRiding();
+                return true;
+            } else {
+                AABB box = this.entity.getBoundingBox().inflate(10.0);
+                List<Mob> mounts = this.entity.level().getEntitiesOfClass(Mob.class, box, e -> e instanceof Saddleable s && s.isSaddled() && !e.isVehicle());
+                if (!mounts.isEmpty()) {
+                    this.entity.startRiding(mounts.getFirst(), true);
+                    return true;
+                }
+            }
+        }
+
+        // 4. Armor & equipment management
+        if (command.equals("armor")) {
+            if (this.entity instanceof AbstractEntityCitizen citizen) {
+                player.openMenu(citizen);
+                return true;
+            }
+        }
+
+        // 5. Gift giving (item held in hand or specific gift action)
+        if (command.equals("gift") || command.startsWith("gift.")) {
+            ItemStack held = player.getMainHandItem();
+            if (!held.isEmpty()) {
+                // Check if gift is an MCA Engagement or Wedding Ring
+                if (held.getItem() instanceof RelationshipItem && this.entity.level() instanceof ServerLevel sl) {
+                    FamilyTree tree = FamilyTree.get(sl);
+                    FamilyTreeNode node = tree.getOrCreate(this.entity);
+                    FamilyTreeNode playerNode = tree.getOrCreate(player);
+                    boolean isWedding = held.getItem() == ItemsMCA.WEDDING_RING;
+                    RelationshipState targetState = isWedding ? RelationshipState.MARRIED_TO_PLAYER : RelationshipState.ENGAGED;
+
+                    node.updatePartner(player, targetState);
+                    playerNode.updatePartner(this.entity, targetState);
+                    PlayerSaveData pData = PlayerSaveData.get(player);
+                    if (isWedding) {
+                        pData.marry(this.entity);
+                    }
+                    held.shrink(1);
+
+                    sl.sendParticles(ParticleTypes.HEART, this.entity.getX(), this.entity.getEyeY() + 0.5, this.entity.getZ(), 15, 0.5, 0.5, 0.5, 0.1);
+                    this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.NEUTRAL, 1.0F, 1.0F);
+                    player.sendSystemMessage(Component.translatable(isWedding ? "interaction.weddingRing.success" : "interaction.engagementRing.success", this.entity.getDisplayName()));
+                    return true;
+                }
+
+                ItemStack gifted = held.split(1);
+                if (this.entity instanceof VillagerLike<?> vl) {
+                    Memories memories = vl.getVillagerBrain().getMemoriesForPlayer(player);
+                    memories.modHearts(10);
+                    vl.getVillagerBrain().rewardHearts(player, 10);
+                }
+                this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.NEUTRAL, 0.5F, 1.2F);
+                if (this.entity.level() instanceof ServerLevel sl) {
+                    sl.sendParticles(ParticleTypes.HEART, this.entity.getX(), this.entity.getEyeY() + 0.5, this.entity.getZ(), 6, 0.3, 0.3, 0.3, 0.1);
+                }
+                player.sendSystemMessage(Component.translatable("mca.interaction.gift.success", this.entity.getDisplayName(), gifted.getHoverName()));
+                return true;
+            }
+        }
+
+        // 6. Dialogue interactions (chat, joke, flirt, hug, kiss, story, play)
+        return handleDialogueAction(player, command);
+    }
+
+    private boolean handleDialogueAction(ServerPlayer player, String command) {
+        if (!(this.entity instanceof VillagerLike<?> vl)) {
+            return false;
+        }
+
+        VillagerBrain<?> brain = vl.getVillagerBrain();
+        Memories memories = brain.getMemoriesForPlayer(player);
+        int currentHearts = memories.getHearts();
+
+        boolean isFlirtOrKiss = command.equals("flirt") || command.equals("kiss");
+        boolean success;
+
+        if (isFlirtOrKiss) {
+            int minHearts = command.equals("kiss") ? 50 : 25;
+            success = currentHearts >= minHearts && this.entity.getRandom().nextFloat() < 0.75F;
+        } else {
+            success = this.entity.getRandom().nextFloat() < 0.85F;
+        }
+
+        if (success) {
+            int heartGain = switch (command) {
+                case "kiss" -> 10;
+                case "flirt" -> 5;
+                case "hug" -> 4;
+                case "joke" -> 3;
+                default -> 2;
+            };
+            memories.modHearts(heartGain);
+            brain.rewardHearts(player, heartGain);
+            this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0F, 1.0F);
+            if (this.entity.level() instanceof ServerLevel sl) {
+                sl.sendParticles(ParticleTypes.HEART, this.entity.getX(), this.entity.getEyeY() + 0.5, this.entity.getZ(), 4, 0.3, 0.3, 0.3, 0.1);
+            }
+            MutableComponent reply = Component.translatable("dialogue." + command + ".success");
+            player.sendSystemMessage(Component.literal("<" + this.entity.getDisplayName().getString() + "> ").append(reply));
+            Network.sendToPlayer(new InteractionDialogueQuestionResponse(reply, false), player);
+        } else {
+            int heartLoss = isFlirtOrKiss ? -3 : -1;
+            memories.modHearts(heartLoss);
+            this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0F, 1.0F);
+            if (this.entity.level() instanceof ServerLevel sl) {
+                sl.sendParticles(ParticleTypes.ANGRY_VILLAGER, this.entity.getX(), this.entity.getEyeY() + 0.5, this.entity.getZ(), 3, 0.3, 0.3, 0.3, 0.1);
+            }
+            MutableComponent reply = Component.translatable("dialogue." + command + ".fail");
+            player.sendSystemMessage(Component.literal("<" + this.entity.getDisplayName().getString() + "> ").append(reply));
+            Network.sendToPlayer(new InteractionDialogueQuestionResponse(reply, false), player);
+        }
+        return true;
     }
 }

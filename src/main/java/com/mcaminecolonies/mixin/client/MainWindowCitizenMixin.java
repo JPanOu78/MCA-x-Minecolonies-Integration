@@ -32,7 +32,7 @@ public abstract class MainWindowCitizenMixin extends AbstractWindowCitizen {
         ButtonImage talkButton = new ButtonImage();
         talkButton.setID("mcaTalkButton");
         talkButton.setSize(18, 18);
-        talkButton.setPosition(186, 6); // Placed at top-right corner inside the window frame
+        talkButton.setPosition(115, 6); // Positioned comfortably in the top header, visible and shifted slightly right
         talkButton.setImage(ResourceLocation.fromNamespaceAndPath("mcaminecolonies", "textures/gui/talk_icon.png"));
         talkButton.setHandler(btn -> {
             this.close();

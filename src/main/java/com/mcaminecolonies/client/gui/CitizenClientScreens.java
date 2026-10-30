@@ -28,3 +28,4 @@ public class CitizenClientScreens {
         Minecraft.getInstance().setScreen(new CitizenCustomizationScreen(citizen));
     }
 }
+

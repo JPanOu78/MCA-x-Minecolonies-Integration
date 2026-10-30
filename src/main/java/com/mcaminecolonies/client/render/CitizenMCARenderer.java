@@ -122,29 +122,58 @@ public class CitizenMCARenderer {
         float limbSwingAmount = entity.walkAnimation.speed(partialTicks);
         float ageInTicks = entity.tickCount + partialTicks;
 
-        // Resolve Job and Guard status
+        // Resolve Job and Guard status safely on client
         String jobName = "none";
         boolean isGuard = false;
         try {
-            ICitizenData citizenData = entity.getCitizenData();
-            if (citizenData != null) {
-                IJob<?> job = citizenData.getJob();
-                if (job != null && job.getJobRegistryEntry() != null && job.getJobRegistryEntry().getKey() != null) {
-                    jobName = job.getJobRegistryEntry().getKey().getPath();
-                    String lowerJob = jobName.toLowerCase();
-                    isGuard = lowerJob.contains("guard") || lowerJob.contains("knight") || lowerJob.contains("archer")
-                            || lowerJob.contains("ranger") || lowerJob.contains("druid") || lowerJob.contains("mage")
-                            || lowerJob.contains("combat") || lowerJob.contains("patrol");
+            // First check DATA_JOB synched entity data (always present on client)
+            String synchedJob = entity.getEntityData().get(AbstractEntityCitizen.DATA_JOB);
+            if (synchedJob != null && !synchedJob.isEmpty()) {
+                jobName = synchedJob;
+            }
+            if (jobName.equals("none") || jobName.isEmpty()) {
+                var view = entity.getCitizenDataView();
+                if (view != null && view.getJob() != null && !view.getJob().isEmpty()) {
+                    jobName = view.getJob();
+                }
+            }
+            if (jobName.equals("none") || jobName.isEmpty()) {
+                ICitizenData citizenData = entity.getCitizenData();
+                if (citizenData != null) {
+                    IJob<?> job = citizenData.getJob();
+                    if (job != null && job.getJobRegistryEntry() != null && job.getJobRegistryEntry().getKey() != null) {
+                        jobName = job.getJobRegistryEntry().getKey().getPath();
+                    }
                 }
             }
         } catch (Exception ignored) {
         }
 
-        // Arm swing & poses: guards only swing when attacking, other workers swing when working
-        float swingProgress = entity.getAttackAnim(partialTicks);
-        if (swingProgress == 0.0F && entity.swinging) {
-            swingProgress = 0.5F;
+        String lowerJob = jobName.toLowerCase();
+        isGuard = lowerJob.contains("guard") || lowerJob.contains("knight") || lowerJob.contains("archer")
+                || lowerJob.contains("ranger") || lowerJob.contains("druid") || lowerJob.contains("mage")
+                || lowerJob.contains("combat") || lowerJob.contains("patrol") || lowerJob.contains("soldier")
+                || lowerJob.contains("mercenary");
+
+        // Fallback guard detection via held weapons / shields (e.g. Iron's spells wands/scrolls, swords, bows, shields)
+        if (!isGuard) {
+            net.minecraft.world.item.ItemStack mainItem = entity.getMainHandItem();
+            net.minecraft.world.item.ItemStack offItem = entity.getOffhandItem();
+            String mainItemName = mainItem.getItem().toString().toLowerCase();
+            String offItemName = offItem.getItem().toString().toLowerCase();
+            if (mainItem.getItem() instanceof net.minecraft.world.item.SwordItem
+                    || mainItem.getItem() instanceof net.minecraft.world.item.BowItem
+                    || mainItem.getItem() instanceof net.minecraft.world.item.CrossbowItem
+                    || mainItem.getItem() instanceof net.minecraft.world.item.ShieldItem
+                    || offItem.getItem() instanceof net.minecraft.world.item.ShieldItem
+                    || mainItemName.contains("wand") || mainItemName.contains("staff") || mainItemName.contains("spell")
+                    || offItemName.contains("spell") || offItemName.contains("shield")) {
+                isGuard = true;
+            }
         }
+
+        // Arm swing & poses: guards ONLY swing when attacking in combat. Non-guard workers swing while working.
+        float swingProgress = entity.getAttackAnim(partialTicks);
         if (!isGuard && swingProgress == 0.0F && entity.getRenderMetadata() != null && entity.getRenderMetadata().contains("working")) {
             float workSwing = (float) Math.sin((entity.tickCount + partialTicks) * 0.4F);
             if (workSwing > 0.0F) {

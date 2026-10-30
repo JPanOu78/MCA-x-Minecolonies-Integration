@@ -17,6 +17,8 @@ public class CitizenMCAData {
     private int faceIndex;
     private int hairColor;
     private int clothingIndex;
+    private String customClothes;
+    private String customHair;
     private String personality;
     private int hearts;
     private boolean isCustomized;
@@ -82,6 +84,8 @@ public class CitizenMCAData {
         tag.putInt("FaceIndex", this.faceIndex);
         tag.putInt("HairColor", this.hairColor);
         tag.putInt("ClothingIndex", this.clothingIndex);
+        if (this.customClothes != null) tag.putString("CustomClothes", this.customClothes);
+        if (this.customHair != null) tag.putString("CustomHair", this.customHair);
         tag.putString("Personality", this.personality);
         tag.putInt("Hearts", this.hearts);
         tag.putBoolean("IsCustomized", this.isCustomized);
@@ -100,6 +104,8 @@ public class CitizenMCAData {
         data.faceIndex = tag.getInt("FaceIndex");
         data.hairColor = tag.contains("HairColor") ? tag.getInt("HairColor") : DEFAULT_HAIR_COLOR;
         data.clothingIndex = tag.getInt("ClothingIndex");
+        if (tag.contains("CustomClothes")) data.customClothes = tag.getString("CustomClothes");
+        if (tag.contains("CustomHair")) data.customHair = tag.getString("CustomHair");
         data.personality = tag.contains("Personality") ? tag.getString("Personality") : "friendly";
         data.hearts = tag.contains("Hearts") ? tag.getInt("Hearts") : 50;
         data.isCustomized = tag.getBoolean("IsCustomized");
@@ -164,6 +170,22 @@ public class CitizenMCAData {
 
     public void setClothingIndex(int clothingIndex) {
         this.clothingIndex = (clothingIndex % 10 + 10) % 10;
+    }
+
+    public String getCustomClothes() {
+        return customClothes;
+    }
+
+    public void setCustomClothes(String customClothes) {
+        this.customClothes = customClothes;
+    }
+
+    public String getCustomHair() {
+        return customHair;
+    }
+
+    public void setCustomHair(String customHair) {
+        this.customHair = customHair;
     }
 
     public String getPersonality() {

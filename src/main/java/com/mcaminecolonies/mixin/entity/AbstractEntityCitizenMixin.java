@@ -9,7 +9,9 @@ import net.conczin.mca.entity.ai.Genetics;
 import net.conczin.mca.entity.ai.Relationship;
 import net.conczin.mca.entity.ai.Traits;
 import net.conczin.mca.entity.ai.brain.VillagerBrain;
+import net.conczin.mca.entity.ai.relationship.AgeState;
 import net.conczin.mca.entity.ai.relationship.CompassionateEntity;
+import net.conczin.mca.entity.ai.relationship.Gender;
 import net.conczin.mca.entity.interaction.EntityCommandHandler;
 import net.conczin.mca.util.network.datasync.CDataManager;
 import net.minecraft.nbt.CompoundTag;
@@ -18,6 +20,7 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.npc.VillagerData;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.npc.VillagerType;
@@ -73,6 +76,29 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             this.mcaminecolonies$traits = new Traits(this);
             this.mcaminecolonies$interactions = new CitizenCommandHandler(this);
             this.mcaminecolonies$villagerData = new VillagerData(VillagerType.PLAINS, VillagerProfession.NONE, 1);
+
+            // Sync gender with MineColonies
+            AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
+            this.mcaminecolonies$genetics.setGender(citizen.isFemale() ? Gender.FEMALE : Gender.MALE);
+
+            // Set tracked age state
+            if (this.getTrackedValue(VillagerLike.AGE_STATE) == AgeState.UNASSIGNED) {
+                this.setTrackedValue(VillagerLike.AGE_STATE, citizen.isBaby() ? AgeState.BABY : AgeState.ADULT);
+            }
+
+            // Randomize clothes and hair if empty so models and Villager Editor preview render completely
+            if (this.getClothes() == null || this.getClothes().isEmpty()) {
+                try {
+                    this.randomizeClothes();
+                } catch (Exception ignored) {
+                }
+            }
+            if (this.getHair() == null || this.getHair().isEmpty()) {
+                try {
+                    this.randomizeHair();
+                } catch (Exception ignored) {
+                }
+            }
         }
     }
 
@@ -131,6 +157,24 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
     @Override
     public void setVillagerData(VillagerData data) {
         this.mcaminecolonies$villagerData = data;
+    }
+
+    @Override
+    public AgeState getAgeState() {
+        if (this.isBaby()) {
+            return AgeState.BABY;
+        }
+        return AgeState.ADULT;
+    }
+
+    @Override
+    public void updateAttributes() {
+        // Suppress MCA's speed modifiers to prevent abrupt rushing or dashing bursts.
+        // MineColonies manages citizen navigation and movement speed independently.
+        var attr = this.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (attr != null) {
+            attr.removeModifier(VillagerLike.SPEED_ID);
+        }
     }
 
     @Override
