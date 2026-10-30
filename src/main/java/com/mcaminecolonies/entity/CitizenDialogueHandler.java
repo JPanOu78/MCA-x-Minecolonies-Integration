@@ -21,6 +21,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,17 +37,66 @@ import java.util.UUID;
  */
 public class CitizenDialogueHandler {
 
-    private static final Map<UUID, VillagerEntityMCA> DELEGATES = new HashMap<>();
+    private static final Map<UUID, CitizenVillagerDelegate> DELEGATES = new HashMap<>();
 
-    public static VillagerEntityMCA getOrCreateDelegate(AbstractEntityCitizen citizen, ServerPlayer player) {
-        VillagerEntityMCA delegate = DELEGATES.get(citizen.getUUID());
+    /**
+     * Subclass of VillagerEntityMCA that overrides messaging to synchronize terminal responses
+     * (jokes, chat success/fail, refusals) directly with the player's client GUI dialogue bubble.
+     */
+    public static class CitizenVillagerDelegate extends VillagerEntityMCA {
+        private final AbstractEntityCitizen citizen;
+
+        public CitizenVillagerDelegate(Level level, Gender gender, AbstractEntityCitizen citizen) {
+            super(gender == Gender.FEMALE ? EntitiesMCA.FEMALE_VILLAGER : EntitiesMCA.MALE_VILLAGER, level, gender);
+            this.citizen = citizen;
+            this.setUUID(citizen.getUUID());
+        }
+
+        @Override
+        public Component getName() {
+            return this.citizen != null ? this.citizen.getName() : super.getName();
+        }
+
+        @Override
+        public boolean isSpeechImpaired() {
+            if (this.citizen instanceof VillagerLike<?> vl) {
+                return vl.isSpeechImpaired();
+            }
+            return super.isSpeechImpaired();
+        }
+
+        @Override
+        public boolean isToYoungToSpeak() {
+            if (this.citizen instanceof VillagerLike<?> vl) {
+                return vl.isToYoungToSpeak();
+            }
+            return super.isToYoungToSpeak();
+        }
+
+        @Override
+        public Component sendChatMessage(Component component, Entity entity) {
+            Component transformed = super.sendChatMessage(component, entity);
+            if (entity instanceof ServerPlayer sp) {
+                Network.sendToPlayer(new InteractionDialogueQuestionResponse(transformed, isSpeechImpaired()), sp);
+                Network.sendToPlayer(new InteractionDialogueResponse("", Collections.emptyList()), sp);
+            }
+            return transformed;
+        }
+
+        @Override
+        public void sendChatMessage(Player player, String translationKey, Object... args) {
+            sendChatMessage(getTranslatable(player, translationKey, args), player);
+        }
+    }
+
+    public static CitizenVillagerDelegate getOrCreateDelegate(AbstractEntityCitizen citizen, ServerPlayer player) {
+        CitizenVillagerDelegate delegate = DELEGATES.get(citizen.getUUID());
         if (delegate == null || delegate.level() != citizen.level()) {
-            delegate = new VillagerEntityMCA(
-                    EntitiesMCA.MALE_VILLAGER,
+            delegate = new CitizenVillagerDelegate(
                     citizen.level(),
-                    citizen.isFemale() ? Gender.FEMALE : Gender.MALE
+                    citizen.isFemale() ? Gender.FEMALE : Gender.MALE,
+                    citizen
             );
-            delegate.setUUID(citizen.getUUID());
             DELEGATES.put(citizen.getUUID(), delegate);
         }
 
@@ -93,16 +145,6 @@ public class CitizenDialogueHandler {
             if (citizen.level() instanceof ServerLevel sl) {
                 sl.sendParticles(ParticleTypes.ANGRY_VILLAGER, citizen.getX(), citizen.getEyeY() + 0.5, citizen.getZ(), 5, 0.3, 0.3, 0.3, 0.1);
             }
-            data.addHearts(-2);
-            data.modFatigue(1);
-            CitizenMCAManager.saveData(citizen, data);
-            if (citizen instanceof VillagerLike<?> vl) {
-                Memories mem = vl.getVillagerBrain().getMemoriesForPlayer(player);
-                if (mem != null) {
-                    mem.modHearts(-2);
-                    mem.modInteractionFatigue(1);
-                }
-            }
             MutableComponent reply = Component.translatable("dialogue.chat.fail");
             player.sendSystemMessage(Component.literal("<" + citizen.getDisplayName().getString() + "> ").append(reply));
             // Send empty dialogue options to clear any previous answers, and show rejection phrase
@@ -111,19 +153,7 @@ public class CitizenDialogueHandler {
             return;
         }
 
-        // Increment interaction fatigue on initiating chat
-        if (data != null) {
-            data.modFatigue(1);
-            CitizenMCAManager.saveData(citizen, data);
-            if (citizen instanceof VillagerLike<?> vl) {
-                Memories mem = vl.getVillagerBrain().getMemoriesForPlayer(player);
-                if (mem != null) {
-                    mem.modInteractionFatigue(1);
-                }
-            }
-        }
-
-        VillagerEntityMCA delegate = getOrCreateDelegate(citizen, player);
+        CitizenVillagerDelegate delegate = getOrCreateDelegate(citizen, player);
         Question question = Dialogues.getInstance().getQuestion("root");
         if (question != null) {
             if (question.isAuto()) {
@@ -169,14 +199,14 @@ public class CitizenDialogueHandler {
             return;
         }
 
-        VillagerEntityMCA delegate = getOrCreateDelegate(citizen, player);
+        CitizenVillagerDelegate delegate = getOrCreateDelegate(citizen, player);
 
         // Forward non-dialogue movement commands to citizen directly (stay, follow, move, etc.)
         if (citizen instanceof VillagerLike<?> vl && !isDialogueTopic(answer)) {
             vl.getInteractions().handle(player, answer);
         }
 
-        if (data != null) {
+        if (data != null && isDialogueTopic(answer)) {
             data.modFatigue(1);
             CitizenMCAManager.saveData(citizen, data);
         }
@@ -188,7 +218,9 @@ public class CitizenDialogueHandler {
     private static boolean isDialogueTopic(String cmd) {
         if (cmd == null) return false;
         return switch (cmd) {
-            case "chat", "joke", "story", "hug", "flirt", "kiss", "procreate", "adopt", "divorce", "rock_paper_scissor", "rumors" -> true;
+            case "chat", "joke", "story", "hug", "flirt", "kiss", "procreate", "procreate_engaged",
+                 "adopt", "divorce", "divorceInitiate", "divorcePapers", "rock_paper_scissor",
+                 "rumors", "apologize", "hire" -> true;
             default -> false;
         };
     }

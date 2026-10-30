@@ -156,32 +156,8 @@ public class CitizenCommandHandler extends EntityCommandHandler {
         // 5. Gift giving (item held in hand or specific gift action)
         if (command.equals("gift") || command.startsWith("gift.")) {
             ItemStack held = player.getMainHandItem();
-            if (!held.isEmpty()) {
-                // Check if gift is an MCA Relationship Item (Bouquet, Engagement Ring, Wedding Ring, Divorce)
-                if (this.entity instanceof AbstractEntityCitizen citizen && CitizenRelationshipHelper.isRelationshipItem(held)) {
-                    return CitizenRelationshipHelper.handleRelationshipItem(player, held, citizen);
-                }
-
-                ItemStack gifted = held.split(1);
-                CitizenMCAData data = null;
-                if (this.entity instanceof AbstractEntityCitizen citizen) {
-                    data = CitizenMCAManager.getData(citizen);
-                    if (data != null) {
-                        data.addHearts(10);
-                        CitizenMCAManager.saveData(citizen, data);
-                    }
-                }
-                if (this.entity instanceof VillagerLike<?> vl) {
-                    Memories memories = vl.getVillagerBrain().getMemoriesForPlayer(player);
-                    memories.modHearts(10);
-                    vl.getVillagerBrain().rewardHearts(player, 10);
-                }
-                this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.PLAYER_LEVELUP, SoundSource.NEUTRAL, 0.5F, 1.2F);
-                if (this.entity.level() instanceof ServerLevel sl) {
-                    sl.sendParticles(ParticleTypes.HEART, this.entity.getX(), this.entity.getEyeY() + 0.5, this.entity.getZ(), 6, 0.3, 0.3, 0.3, 0.1);
-                }
-                player.sendSystemMessage(Component.translatable("mca.interaction.gift.success", this.entity.getDisplayName(), gifted.getHoverName()));
-                return true;
+            if (this.entity instanceof AbstractEntityCitizen citizen) {
+                return CitizenGiftHelper.handleGift(player, citizen, held);
             }
         }
 

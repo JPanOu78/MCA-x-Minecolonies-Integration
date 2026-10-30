@@ -50,9 +50,9 @@ public abstract class InteractScreenMixin {
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void mcaminecolonies$handleDialogueClick(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
         if (button == 0) { // Left-click
-            // If the dialogue bubble is displayed and there are no choices (or clicking outside options):
+            // If the dialogue bubble is displayed and there are no choices (terminal reply or rejection):
             // Dismiss the dialogue bubble and restore the base interact menu buttons without needing ESC.
-            if (this.dialogQuestionText != null && (this.dialogAnswers == null || this.dialogAnswers.isEmpty() || this.dialogAnswerHover == null)) {
+            if (this.dialogQuestionText != null && (this.dialogAnswers == null || this.dialogAnswers.isEmpty())) {
                 this.dialogQuestionText = null;
                 this.dialogQuestionId = null;
                 this.dialogAnswers = Collections.emptyList();
@@ -65,7 +65,7 @@ public abstract class InteractScreenMixin {
 
     @Inject(method = "mouseClicked", at = @At("TAIL"))
     private void mcaminecolonies$clearAnswersOnChoice(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
-        if (button == 0 && this.dialogQuestionText != null) {
+        if (button == 0 && this.dialogAnswerHover != null && this.dialogQuestionText != null) {
             // Once a question answer has been selected, clear choices immediately to prevent repeat clicks
             this.dialogAnswers = Collections.emptyList();
             this.dialogAnswerHover = null;

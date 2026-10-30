@@ -5,6 +5,8 @@ import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
 import net.conczin.mca.entity.VillagerLike;
 import net.conczin.mca.entity.ai.Memories;
 import net.conczin.mca.entity.ai.MoveState;
+import net.conczin.mca.entity.ai.Relationship;
+import net.conczin.mca.entity.ai.relationship.CompassionateEntity;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -86,6 +88,15 @@ public class CitizenMCAManager {
                     if (mem != null && mem.getInteractionFatigue() > 0) {
                         mem.modInteractionFatigue(-1);
                     }
+                }
+            }
+
+            // Gift desaturation reset: clear oldest item from gift saturation queue every 24000 ticks (1 day) per MCA standard
+            int resetPeriod = net.conczin.mca.Config.getInstance().giftDesaturationReset;
+            if (resetPeriod > 0 && citizen.tickCount % resetPeriod == 0) {
+                if (citizen instanceof CompassionateEntity<?> comp
+                        && comp.getRelationships() instanceof Relationship<?> rel) {
+                    rel.getGiftSaturation().pop();
                 }
             }
         }
