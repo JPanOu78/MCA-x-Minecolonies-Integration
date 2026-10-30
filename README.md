@@ -4,74 +4,106 @@
 [![NeoForge](https://img.shields.io/badge/ModLoader-NeoForge-orange.svg)](https://neoforged.net/)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-A deep, seamless integration mod for **Minecraft 1.21.1 (NeoForge)** that bridges **MineColonies** and **MCA Reborn (Minecraft Comes Alive)**. It replaces blocky citizen models with humanized MCA 3D models and textures, integrates MCA growth and age progression stages, enables item-based customization, provides a top-right talk button in MineColonies GUI to open an interactive MCA dialogue screen, and overrides colony child births with MCA genetics.
+A deep, seamless integration mod for **Minecraft 1.21.1 (NeoForge)** that completely unifies **MineColonies** and **MCA Reborn (Minecraft Comes Alive)**. 
+
+Every MineColonies citizen is rendered as an MCA Reborn human with 3D models, layered hair, customizable genetics, age stages, full dialogue trees, and balanced gifting mechanics — all while preserving 100% of MineColonies worker AI, pathfinding, and colony management systems.
 
 ---
 
-## 🌟 Features
+## 🌟 Key Features
 
-### 1. 👶 Age Progression & Natural Growth (Baby to Adult)
+### 1. 👤 Complete MCA Humanoid Rendering & Appearance
+- **Native 3D Player-Like Models**: Replaces standard blocky villagers with MCA's custom humanoid models:
+  - **Female Citizens**: Alex slim 3-pixel arm geometry, female facial textures, feminine hairstyles, and female profession outfits.
+  - **Male Citizens**: Steve standard 4-pixel arm geometry, male facial textures, masculine hairstyles, and male profession outfits.
+- **Layered 3D Hair**: Citizens feature multi-layered hair (Hair Base, Bangs, Back, Front, Extra) with individual RGB dye coloring.
+- **Heterochromia / Dual Eye Colors**: True left and right eye color genetics.
+- **Realistic Melanin & Hemoglobin Skin Tones**: Skin palettes mapped directly to MCA genetics for accurate, non-inverted skin rendering.
+- **Profession & Wardrobe Compatibility**: Citizens wear profession-specific outfits that adapt automatically to their gender and age.
+
+### 2. 👶 Age Progression & Life Stages (Baby to Adult)
 - **5 Distinct Life Stages**:
-  - **Baby** (0–2 min): Crawling / small swaddle model with baby clothing.
-  - **Toddler** (2–5 min): Early growth stage with toddler clothing and cute proportions.
-  - **Child** (5–10 min): Active child stage with child clothing.
-  - **Teen** (10–15 min): Youth stage preparing for adulthood.
-  - **Adult** (15+ min): Full adult model with profession-specific work clothing.
-- **Natural Transition**: When a child citizen grows into an Adult, they automatically graduate into a full MineColonies adult citizen, ready for worker jobs and assignments!
-- **Growth Acceleration**: Feed children with Golden Apples, Cake, Apples, or Cookies to accelerate their growth into adulthood.
+  - **Baby** (0–2 min): Small swaddle model with crawl animations.
+  - **Toddler** (2–5 min): Early childhood stage with cute proportions.
+  - **Child** (5–10 min): Active child model with child outfits.
+  - **Teen** (10–15 min): Youth stage preparing for career assignments.
+  - **Adult** (15+ min): Full adult model capable of taking on any colony profession.
+- **Proportional Hitboxes**: Hitbox and eye height dynamically adjust according to MCA's `VillagerDimensions`.
+- **Growth Acceleration**: Feed children Cake, Golden Apples, Apples, or Cookies to speed up their growth into adulthood.
+- **Colony Graduation**: When a child grows into an adult, they seamlessly become a full MineColonies worker citizen.
 
-### 2. 👗 Gender Consistency & Human Models
-- **Female Citizens**: Alex slim 3-pixel arm geometry, female face, female hairstyle, and female profession outfits.
-- **Male Citizens**: Steve standard 4-pixel arm geometry, male face, male hairstyle, and male profession outfits.
-- **Persistent Genetics**: Appearance is deterministically seeded from citizen UUID and synchronized across chunk loads and world saves.
+### 3. 💬 MCA Dialogue System & Fatigue Mechanics
+- **In-GUI Talk Button**: Open any citizen's MineColonies window (`MainWindowCitizen`) and click the **💬 Talk Button** in the top-right corner to open MCA's native `InteractScreen`.
+- **Multi-Turn Interactive Dialogue**:
+  - Full conversational topics: **Chat**, **Tell Joke**, **Story**, **Flirt**, **Kiss**, **Hug**, **Play** (Rock-Paper-Scissors for kids), **Apologize**, **Rumors**, and **Hire**.
+  - Citizen responses reflect their unique traits, mood, and personality.
+- **Fatigue & Conversation Limits**:
+  - Citizens have interaction fatigue (`data.getFatigue()`). Engaging in conversations builds fatigue.
+  - If a citizen is exhausted (`Fatigue >= 4`), they will politely decline further conversation with angry particles and sounds until they rest.
+  - Fatigue gradually decays over time per MCA's interaction cooldown.
+- **Polished Dialogue UI**:
+  - Citizen replies (jokes, stories, chat lines) appear directly inside the speech bubble in the GUI.
+  - **Click-to-Dismiss**: Once the citizen delivers their final line, simply left-click anywhere on screen to close the speech bubble and return to the main interaction menu without needing to press `ESC`.
+  - Double-click protection prevents accidental choice spamming.
 
-### 3. ✂️ Interactive Customization with MCA Items
-Right-click any citizen with MCA items or vanilla tools to customize them in real-time:
-- **Dye Items**: Applies dye to the citizen's hair (Black, Brown, Blonde, Ginger/Red, Platinum, Pink, Cyan, Blue, etc.)!
-- **Comb / Shears**: Cycles through 40 unique hairstyles with sound effects.
-- **Needle & Thread**: Cycles through clothing outfits and variants.
-- **Potion of Femininity**: Transforms citizen into Female (Alex model, female textures, female voice pitch).
-- **Potion of Masculinity**: Transforms citizen into Male (Steve model, male textures, male voice pitch).
-- **Villager Editor / Dressing Mirror**: Opens the full 3D visual customization GUI.
+### 4. 🎁 MCA Gifting System & Saturation Rules
+- **Balanced Gifting Mechanics**: Completely replaces unrestricted gifting with MCA's authentic preferences and satisfaction formulas:
+  - **Dynamic Item Scoring**: Tools and weapons are scored by damage and speed; projectiles by range; armor by defense/toughness; food by nutrition.
+  - **Trait & Personality Satisfaction**: Citizens evaluate gifts based on their unique personality, sending an `AnalysisResults` breakdown to the player.
+  - **Gift Saturation (Diminishing Returns)**: Repeatedly giving the same item results in severe satisfaction penalties (`desaturation = count * factor * base^exponent`).
+  - **Saturated Rejection**: If an item is spammed too frequently, the citizen refuses with `"gift.saturated"` and will not consume the item.
+  - **Disliked Gifts**: Unfavorable items are rejected (`gift.fail`) without being wasted.
+  - **Accepted Gifts**: Accepted items consume 1 item from hand, insert it into `InventoryCitizen`, reward hearts/mood, and play heart celebration particles.
+  - **Saturation Decay**: Oldest gifted items in the saturation queue decay every 1 in-game day (24,000 ticks).
 
-### 4. 💬 MCA Dialogue Screen (Top-Right Button in MineColonies GUI)
-- Whenever you open a citizen's window in MineColonies (`MainWindowCitizen`), a **💬 Talk Icon Button** appears in the top-right corner.
-- Clicking the button opens the **MCA Dialogue Screen**:
-  - Live 3D animated citizen avatar tracking your cursor.
-  - Affection / Hearts meter.
-  - Interactive options: **Chat**, **Tell Joke**, **Story**, **Flirt**, **Compliment**, and **Customize Look**.
-  - Citizen responds with unique personality-based dialogue lines, villager sounds, and particle reactions!
-  - Button to smoothly transition back to the MineColonies colony window.
+### 5. 💍 Relationships, Marriage & Newborn Genetics
+- **Relationship Items**: Full support for MCA relationship items:
+  - **Wedding Ring / Engagement Ring**: Propose and marry citizens.
+  - **Bouquet**: Express affection and boost romance.
+  - **Divorce Papers**: End marital relationships cleanly.
+- **Inherited Genetics**: Children born from colony reproduction inherit hair colors, eye colors, and skin tones from their colony parents.
 
-### 5. 🍼 Colony Child Birth Override
-- When citizen reproduction occurs in MineColonies houses, the newborn baby is initialized with MCA genetics (inheriting hair color and skin tone from colony parents).
-- Plays celebration sounds and particle effects upon birth.
+### 6. ✂️ In-Game Customization & Villager Editor
+- **Villager Editor & Dressing Mirror**: Open the full 3D visual editor on any citizen to customize age, hair styles, hair dyes, skin colors, and gender in real-time.
+- **Real-Time Item Customization**:
+  - **Comb / Shears**: Cycle through hairstyles with clicking sounds.
+  - **Needle & Thread**: Cycle through clothing styles.
+  - **Dye Items**: Dye citizen hair directly in-world.
+  - **Potion of Femininity / Masculinity**: Toggle gender between female and male.
+
+### 7. 🏰 Flawless MineColonies Worker Compatibility
+- **100% Colony AI**: Citizens execute all MineColonies jobs (Builders, Miners, Farmers, Guards, Knights, Cooks, etc.) without interference.
+- **Tavern Visitor Protection**: Tavern visitors and wandering recruits remain strictly on their MineColonies Recruit GUI, preventing accidental citizen window overrides.
 
 ---
 
 ## 📋 Requirements
 
-| Mod | Version | Platform |
+| Dependency | Required Version | Note |
 |---|---|---|
 | **Minecraft** | `1.21.1` | Java Edition |
 | **NeoForge** | `21.1.x`+ | Mod Loader |
-| **MineColonies** | `1.21.1` (with Structurize, BlockUI, Multi-Piston, Domum Ornamentum) | Colony Framework |
-| **MCA Reborn** | `1.21.1` | Asset & Model Provider |
+| **MineColonies** | `1.21.1` | Colony Management Mod |
+| **MCA Reborn** | `7.7.36-beta.3`+ | Minecraft Comes Alive Reborn |
+| **Structurize** | `1.21.1` | Required by MineColonies |
+| **BlockUI** | `1.21.1` | Required by MineColonies |
+| **Multi-Piston** | `1.21.1` | Required by MineColonies |
+| **Domum Ornamentum** | `1.21.1` | Required by MineColonies |
 
 ---
 
 ## 🚀 Installation
 
-1. Make sure **Minecraft 1.21.1** is installed with **NeoForge**.
-2. Download and place the following mods into your `.minecraft/mods` folder:
+1. Install **Minecraft 1.21.1** with **NeoForge**.
+2. Download and drop the following files into your `.minecraft/mods` folder:
    - `mcaminecolonies-1.0.0.jar`
-   - `minecolonies-1.21.1-*.jar` (and its required dependencies: `structurize`, `blockui`, `multipiston`, `domum_ornamentum`)
-   - `minecraft-comes-alive-reborn-1.21.1-*.jar`
-3. Launch the game. Colony citizens will immediately feature MCA human models, growth stages, customization tools, and dialogue options!
+   - `minecolonies-1.21.1-*.jar` (along with `structurize`, `blockui`, `multipiston`, `domum_ornamentum`)
+   - `mca-neoforge-7.7.36-beta.3+1.21.1.jar`
+3. Launch the game. Colony citizens will immediately spawn and render as full MCA humans!
 
 ---
 
-## 🛠️ Building From Source
+## 🛠️ Building from Source
 
 ```bash
 # Clone the repository
@@ -82,13 +114,16 @@ cd MCA-x-Minecolonies-Integration
 ./gradlew build
 ```
 
-The compiled mod JAR will be located in:
+Compiled JAR file will be available at:
 ```
 build/libs/mcaminecolonies-1.0.0.jar
 ```
 
 ---
 
-## 📄 License
+## 📄 License & Credits
 
-This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)** to maintain compatibility with both MineColonies and MCA Reborn open-source licenses.
+This mod is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
+- **MineColonies** is developed by the MineColonies Team.
+- **MCA Reborn (Minecraft Comes Alive)** is developed by the MCA Team.
+- Special thanks to both development communities for their outstanding open-source frameworks.
