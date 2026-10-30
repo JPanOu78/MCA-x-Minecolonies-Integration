@@ -30,8 +30,14 @@ public class CitizenAppearance {
     public CitizenAppearance(AbstractEntityCitizen citizen) {
         CitizenMCAData data = CitizenMCAManager.getData(citizen);
 
-        // Synchronize gender with Minecolonies citizen
-        this.isFemale = citizen.isFemale();
+        // Synchronize gender with Minecolonies citizen or MCA VillagerLike data
+        boolean female = citizen.isFemale();
+        if (citizen instanceof VillagerLike<?> vl && vl.getGenetics() != null && vl.getGenetics().getGender() != null && vl.getGenetics().getGender() != net.conczin.mca.entity.ai.relationship.Gender.UNASSIGNED) {
+            female = (vl.getGenetics().getGender() == net.conczin.mca.entity.ai.relationship.Gender.FEMALE);
+        } else if (data != null) {
+            female = data.isFemale();
+        }
+        this.isFemale = female;
         this.isSlimModel = this.isFemale;
 
         this.ageState = data.getAgeState(citizen.isBaby());
@@ -61,7 +67,7 @@ public class CitizenAppearance {
                 }
                 float faceGene = vl.getGenetics().getGene(Genetics.FACE);
                 if (faceGene > 0.0F) {
-                    vFaceIndex = (int) Math.min(21.0F, Math.max(0.0F, faceGene * 22.0F));
+                    vFaceIndex = (int) Math.min(10.0F, Math.max(0.0F, faceGene * 11.0F));
                 }
                 float mGene = vl.getGenetics().getGene(Genetics.MELANIN);
                 if (mGene > 0.0F) {
@@ -144,14 +150,15 @@ public class CitizenAppearance {
     }
 
     public ResourceLocation getFaceTexture(AbstractEntityCitizen entity) {
-        String genderDir = isFemale ? "female" : "male";
-        int faceIdx = (faceIndex % 22 + 22) % 22;
+        int faceIdx = (faceIndex % 11 + 11) % 11;
         int seed = (entity.tickCount / 2) + Math.abs(entity.getUUID().hashCode() % 1000);
         boolean blink = (seed % 50 == 1 || seed % 57 == 1) || entity.isSleeping() || entity.isDeadOrDying();
-        String suffix = blink ? "_blink" : "";
+        if (blink) {
+            return ResourceLocation.fromNamespaceAndPath("mca", "skins/face/normal/blink.png");
+        }
         return ResourceLocation.fromNamespaceAndPath(
             "mca",
-            "skins/face/normal/" + genderDir + "/" + faceIdx + suffix + ".png"
+            "skins/face/normal/" + faceIdx + ".png"
         );
     }
 
@@ -198,6 +205,9 @@ public class CitizenAppearance {
             }
             if (path.startsWith("/")) {
                 path = path.substring(1);
+            }
+            if (!path.startsWith("skins/")) {
+                path = "skins/" + path;
             }
             return ResourceLocation.fromNamespaceAndPath("mca", path);
         } catch (Exception e) {

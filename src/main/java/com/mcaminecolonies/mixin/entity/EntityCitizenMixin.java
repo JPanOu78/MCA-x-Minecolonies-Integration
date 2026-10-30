@@ -36,6 +36,15 @@ public abstract class EntityCitizenMixin {
                 // Save directly to root tag so GetVillagerRequest and VillagerEditorScreen load Clothes, Hair, Genetics
                 dataManager.save(ent, tag);
             }
+            if (vl.getGenetics() != null && vl.getGenetics().getGender() != null) {
+                tag.putString("Gender", vl.getGenetics().getGender().name());
+            }
+            if (vl.getAgeState() != null) {
+                tag.putInt("AgeState", vl.getAgeState().ordinal());
+            }
+            if (ent instanceof AbstractEntityCitizen cit && cit.getCustomName() != null) {
+                tag.putString("CustomName", cit.getCustomName().getString());
+            }
         }
     }
 
@@ -64,9 +73,23 @@ public abstract class EntityCitizenMixin {
                     if (vl.getHair() != null && !vl.getHair().isEmpty()) {
                         data.setCustomHair(vl.getHair());
                     }
+                    if (tag.contains("Skin", 8)) {
+                        data.setCustomSkin(tag.getString("Skin"));
+                    }
                     if (vl.getHairDye() != 0 && vl.getHairDye() != -16777216) {
                         data.setHairColor(vl.getHairDye());
                     }
+                    if (tag.contains("SkinDye", 99)) {
+                        data.setSkinDye(tag.getInt("SkinDye"));
+                    } else if (tag.contains("SkinColor", 99)) {
+                        data.setSkinDye(tag.getInt("SkinColor"));
+                    }
+                    if (vl.getGenetics() != null && vl.getGenetics().getGender() != null && vl.getGenetics().getGender() != net.conczin.mca.entity.ai.relationship.Gender.UNASSIGNED) {
+                        boolean fem = (vl.getGenetics().getGender() == net.conczin.mca.entity.ai.relationship.Gender.FEMALE);
+                        data.setFemale(fem);
+                        citizen.setFemale(fem);
+                    }
+                    data.setCustomized(true);
                     CitizenMCAManager.saveData(citizen, data);
                 } catch (Exception ignored) {
                 }

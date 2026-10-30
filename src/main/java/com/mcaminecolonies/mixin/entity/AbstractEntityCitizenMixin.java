@@ -16,6 +16,7 @@ import net.conczin.mca.entity.ai.relationship.Gender;
 import net.conczin.mca.entity.interaction.EntityCommandHandler;
 import net.conczin.mca.util.network.datasync.CDataManager;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -229,10 +230,25 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
         AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
         CitizenMCAData data = CitizenMCAManager.getData(citizen);
 
-        if (tag.contains("Clothes", 8)) data.setCustomClothes(tag.getString("Clothes"));
-        if (tag.contains("Hair", 8)) data.setCustomHair(tag.getString("Hair"));
+        if (tag.contains("Clothes", 8)) {
+            String clothes = tag.getString("Clothes");
+            data.setCustomClothes(clothes);
+            this.setClothes(clothes);
+        }
+        if (tag.contains("Hair", 8)) {
+            String hair = tag.getString("Hair");
+            data.setCustomHair(hair);
+            this.setHair(hair);
+        }
+        if (tag.contains("HairStyle", 8)) {
+            String style = tag.getString("HairStyle");
+            data.setCustomHair(style);
+            this.setHair(style);
+        }
+
         if (tag.contains("Skin", 8)) {
-            data.setCustomSkin(tag.getString("Skin"));
+            String skin = tag.getString("Skin");
+            data.setCustomSkin(skin);
         } else if (tag.contains("Skin", 99)) {
             float skinGene = tag.getFloat("Skin");
             int sIdx = (int) Math.min(4.0F, Math.max(0.0F, skinGene * 5.0F));
@@ -245,7 +261,7 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
 
         if (tag.contains("Face", 99)) {
             float faceGene = tag.getFloat("Face");
-            int fIdx = (int) Math.min(21.0F, Math.max(0.0F, faceGene * 22.0F));
+            int fIdx = (int) Math.min(10.0F, Math.max(0.0F, faceGene * 11.0F));
             data.setFaceIndex(fIdx);
             if (this.mcaminecolonies$genetics != null) {
                 this.mcaminecolonies$genetics.setGene(Genetics.FACE, faceGene);
@@ -268,29 +284,59 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             }
         }
 
-        if (tag.contains("SkinDye", 99)) data.setSkinDye(tag.getInt("SkinDye"));
+        if (tag.contains("SkinColor", 99)) {
+            int sc = tag.getInt("SkinColor");
+            data.setSkinDye(sc);
+        } else if (tag.contains("SkinDye", 99)) {
+            int sc = tag.getInt("SkinDye");
+            data.setSkinDye(sc);
+        }
 
-        if (tag.contains("HairColorRed", 99) && tag.contains("HairColorGreen", 99) && tag.contains("HairColorBlue", 99)) {
-            int r = Math.round(tag.getFloat("HairColorRed") * 255.0F) & 0xFF;
-            int g = Math.round(tag.getFloat("HairColorGreen") * 255.0F) & 0xFF;
-            int b = Math.round(tag.getFloat("HairColorBlue") * 255.0F) & 0xFF;
-            data.setHairColor(0xFF000000 | (r << 16) | (g << 8) | b);
-        } else {
-            int hairDye = this.getHairDye();
-            if (hairDye != 0 && hairDye != -16777216) data.setHairColor(hairDye);
+        if (tag.contains("HairColor", 99)) {
+            int hc = tag.getInt("HairColor");
+            data.setHairColor(hc);
+            float r = ((hc >> 16) & 0xFF) / 255.0F;
+            float g = ((hc >> 8) & 0xFF) / 255.0F;
+            float b = (hc & 0xFF) / 255.0F;
+            this.setHairDye(r, g, b);
+        } else if (tag.contains("HairDye", 99)) {
+            int hc = tag.getInt("HairDye");
+            data.setHairColor(hc);
+            float r = ((hc >> 16) & 0xFF) / 255.0F;
+            float g = ((hc >> 8) & 0xFF) / 255.0F;
+            float b = (hc & 0xFF) / 255.0F;
+            this.setHairDye(r, g, b);
+        } else if (tag.contains("HairColorRed", 99) && tag.contains("HairColorGreen", 99) && tag.contains("HairColorBlue", 99)) {
+            float r = tag.getFloat("HairColorRed");
+            float g = tag.getFloat("HairColorGreen");
+            float b = tag.getFloat("HairColorBlue");
+            int ir = Math.round(r * 255.0F) & 0xFF;
+            int ig = Math.round(g * 255.0F) & 0xFF;
+            int ib = Math.round(b * 255.0F) & 0xFF;
+            int hc = 0xFF000000 | (ir << 16) | (ig << 8) | ib;
+            data.setHairColor(hc);
+            this.setHairDye(r, g, b);
         }
 
         if (tag.contains("Gender", 99)) {
             boolean female = (tag.getInt("Gender") == Gender.FEMALE.ordinal());
             data.setFemale(female);
+            citizen.setFemale(female);
             if (this.mcaminecolonies$genetics != null) {
                 this.mcaminecolonies$genetics.setGender(female ? Gender.FEMALE : Gender.MALE);
+            }
+            if (citizen.getCitizenData() != null) {
+                citizen.getCitizenData().setGender(female);
             }
         } else if (tag.contains("Gender", 8)) {
             boolean female = "FEMALE".equalsIgnoreCase(tag.getString("Gender"));
             data.setFemale(female);
+            citizen.setFemale(female);
             if (this.mcaminecolonies$genetics != null) {
                 this.mcaminecolonies$genetics.setGender(female ? Gender.FEMALE : Gender.MALE);
+            }
+            if (citizen.getCitizenData() != null) {
+                citizen.getCitizenData().setGender(female);
             }
         }
 
@@ -298,10 +344,23 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
         CitizenMCAManager.saveData(citizen, data);
     }
 
+    public void readAdditionalSaveDataForEditor(CompoundTag tag) {
+        this.readAdditionalSaveData(tag);
+    }
+
     @Override
     public void syncFromEditor(CompoundTag tag) {
-        VillagerLike.super.syncFromEditor(tag);
         this.readAdditionalSaveData(tag);
+        if (tag.contains("CustomName", 8)) {
+            String name = tag.getString("CustomName");
+            if (!name.isBlank()) {
+                this.setCustomName(Component.literal(name));
+                AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
+                if (citizen.getCitizenData() != null) {
+                    citizen.getCitizenData().setName(name);
+                }
+            }
+        }
     }
 
     @Override
