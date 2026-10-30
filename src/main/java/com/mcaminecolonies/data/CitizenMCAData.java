@@ -25,6 +25,7 @@ public class CitizenMCAData {
     private String customHair;
     private String personality;
     private int hearts;
+    private int fatigue;
     private boolean isCustomized;
     private UUID followTarget;
 
@@ -103,6 +104,7 @@ public class CitizenMCAData {
         if (this.customHair != null) tag.putString("CustomHair", this.customHair);
         tag.putString("Personality", this.personality);
         tag.putInt("Hearts", this.hearts);
+        tag.putInt("Fatigue", this.fatigue);
         tag.putBoolean("IsCustomized", this.isCustomized);
         if (this.followTarget != null) tag.putUUID("FollowTarget", this.followTarget);
         return tag;
@@ -139,6 +141,7 @@ public class CitizenMCAData {
         if (tag.contains("CustomHair")) data.customHair = tag.getString("CustomHair");
         data.personality = tag.contains("Personality") ? tag.getString("Personality") : "friendly";
         data.hearts = tag.contains("Hearts") ? tag.getInt("Hearts") : 50;
+        data.fatigue = tag.contains("Fatigue") ? tag.getInt("Fatigue") : 0;
         data.isCustomized = tag.getBoolean("IsCustomized");
         if (tag.hasUUID("FollowTarget")) data.followTarget = tag.getUUID("FollowTarget");
         return data;
@@ -270,6 +273,18 @@ public class CitizenMCAData {
 
     public void addHearts(int delta) {
         setHearts(this.hearts + delta);
+    }
+
+    public int getFatigue() {
+        return fatigue;
+    }
+
+    public void setFatigue(int fatigue) {
+        this.fatigue = Math.max(0, fatigue);
+    }
+
+    public void modFatigue(int delta) {
+        setFatigue(this.fatigue + delta);
     }
 
     public boolean isCustomized() {

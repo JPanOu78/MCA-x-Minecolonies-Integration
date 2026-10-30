@@ -197,7 +197,7 @@ public class CitizenAppearance {
     }
 
     public ResourceLocation getHairTexture() {
-        if (customHair != null) {
+        if (customHair != null && customHair.endsWith(".png") && !customHair.equals("skins/") && !customHair.equals("none")) {
             return resolveMcaTexture(customHair, "skins/hair/" + (isFemale ? "female" : "male") + "/" + (hairIndex % 40) + ".png");
         }
         String genderDir = isFemale ? "female" : "male";
@@ -233,6 +233,12 @@ public class CitizenAppearance {
     }
 
     private static ResourceLocation resolveMcaTexture(String path, String fallback) {
+        if (path == null || path.isBlank() || path.equals("skins/") || path.equals("none")) {
+            if (fallback != null) {
+                return ResourceLocation.fromNamespaceAndPath("mca", fallback);
+            }
+            return null;
+        }
         try {
             if (path.contains(":")) {
                 return ResourceLocation.parse(path);

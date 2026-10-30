@@ -163,6 +163,14 @@ public class CitizenCommandHandler extends EntityCommandHandler {
                 }
 
                 ItemStack gifted = held.split(1);
+                CitizenMCAData data = null;
+                if (this.entity instanceof AbstractEntityCitizen citizen) {
+                    data = CitizenMCAManager.getData(citizen);
+                    if (data != null) {
+                        data.addHearts(10);
+                        CitizenMCAManager.saveData(citizen, data);
+                    }
+                }
                 if (this.entity instanceof VillagerLike<?> vl) {
                     Memories memories = vl.getVillagerBrain().getMemoriesForPlayer(player);
                     memories.modHearts(10);
@@ -191,10 +199,23 @@ public class CitizenCommandHandler extends EntityCommandHandler {
         int currentHearts = memories.getHearts();
         int fatigue = memories.getInteractionFatigue();
 
+        CitizenMCAData mcaData = (this.entity instanceof AbstractEntityCitizen citizen) ? CitizenMCAManager.getData(citizen) : null;
+        if (mcaData != null) {
+            fatigue = Math.max(fatigue, mcaData.getFatigue());
+            currentHearts = mcaData.getHearts();
+            memories.setInteractionFatigue(fatigue);
+            memories.setHearts(currentHearts);
+        }
+
         // 1. Fatigue limit check (aligned with MCA Reborn dialogue fatigue)
         if (fatigue >= 4) {
             memories.modHearts(-2);
             memories.modInteractionFatigue(1);
+            if (mcaData != null && this.entity instanceof AbstractEntityCitizen citizen) {
+                mcaData.setFatigue(memories.getInteractionFatigue());
+                mcaData.setHearts(memories.getHearts());
+                CitizenMCAManager.saveData(citizen, mcaData);
+            }
             this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0F, 1.0F);
             if (this.entity.level() instanceof ServerLevel sl) {
                 sl.sendParticles(ParticleTypes.ANGRY_VILLAGER, this.entity.getX(), this.entity.getEyeY() + 0.5, this.entity.getZ(), 5, 0.3, 0.3, 0.3, 0.1);
@@ -249,6 +270,13 @@ public class CitizenCommandHandler extends EntityCommandHandler {
             player.sendSystemMessage(Component.literal("<" + this.entity.getDisplayName().getString() + "> ").append(reply));
             Network.sendToPlayer(new InteractionDialogueQuestionResponse(reply, false), player);
         }
+
+        if (mcaData != null && this.entity instanceof AbstractEntityCitizen citizen) {
+            mcaData.setFatigue(memories.getInteractionFatigue());
+            mcaData.setHearts(memories.getHearts());
+            CitizenMCAManager.saveData(citizen, mcaData);
+        }
+
         return true;
     }
 }

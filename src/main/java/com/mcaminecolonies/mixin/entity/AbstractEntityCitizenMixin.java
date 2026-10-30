@@ -11,6 +11,8 @@ import net.conczin.mca.entity.ai.Relationship;
 import net.conczin.mca.entity.ai.Traits;
 import net.conczin.mca.entity.ai.brain.VillagerBrain;
 import net.conczin.mca.entity.ai.relationship.AgeState;
+import net.conczin.mca.resources.HairStyleList;
+import net.conczin.mca.resources.data.skin.HairStyle;
 import net.conczin.mca.resources.data.skin.LayeredHair;
 import net.conczin.mca.entity.ai.relationship.CompassionateEntity;
 import net.conczin.mca.entity.ai.relationship.Gender;
@@ -260,13 +262,26 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
         }
         if (tag.contains("Hair", 8)) {
             String hair = tag.getString("Hair");
-            data.setCustomHair(hair);
+            if (hair.endsWith(".png")) {
+                data.setCustomHair(hair);
+            }
             this.setHair(hair);
         }
         if (tag.contains("HairStyle", 8)) {
             String style = tag.getString("HairStyle");
-            data.setCustomHair(style);
             this.setHairStyleId(style);
+            try {
+                HairStyle hs = HairStyleList.getInstance().get(style);
+                if (hs != null) {
+                    this.setHairStyle(hs);
+                }
+            } catch (Exception ignored) {
+            }
+            if (style.endsWith(".png")) {
+                data.setCustomHair(style);
+            } else {
+                data.setCustomHair(null);
+            }
         }
         if (tag.contains("HairBase", 8)) this.setLayeredHair(LayeredHair.Category.BASE, tag.getString("HairBase"));
         if (tag.contains("HairBangs", 8)) this.setLayeredHair(LayeredHair.Category.BANGS, tag.getString("HairBangs"));

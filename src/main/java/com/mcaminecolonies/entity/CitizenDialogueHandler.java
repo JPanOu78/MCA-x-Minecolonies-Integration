@@ -57,6 +57,14 @@ public class CitizenDialogueHandler {
             Memories mem = delegate.getVillagerBrain().getMemoriesForPlayer(player);
             if (mem != null) {
                 mem.setHearts(data.getHearts());
+                mem.setInteractionFatigue(data.getFatigue());
+            }
+            if (citizen instanceof VillagerLike<?> vl) {
+                Memories citMem = vl.getVillagerBrain().getMemoriesForPlayer(player);
+                if (citMem != null) {
+                    citMem.setHearts(data.getHearts());
+                    citMem.setInteractionFatigue(data.getFatigue());
+                }
             }
         }
 
@@ -64,6 +72,22 @@ public class CitizenDialogueHandler {
     }
 
     public static void handleInit(AbstractEntityCitizen citizen, ServerPlayer player) {
+        CitizenMCAData data = CitizenMCAManager.getData(citizen);
+        if (data != null && data.getFatigue() >= 4) {
+            // Dialogue limit: citizen is exhausted from talking! Reject interaction
+            citizen.level().playSound(null, citizen.blockPosition(), net.minecraft.sounds.SoundEvents.VILLAGER_NO, net.minecraft.sounds.SoundSource.NEUTRAL, 1.0F, 1.0F);
+            if (citizen.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                sl.sendParticles(net.minecraft.core.particles.ParticleTypes.ANGRY_VILLAGER, citizen.getX(), citizen.getEyeY() + 0.5, citizen.getZ(), 5, 0.3, 0.3, 0.3, 0.1);
+            }
+            data.addHearts(-1);
+            data.modFatigue(1);
+            CitizenMCAManager.saveData(citizen, data);
+            net.minecraft.network.chat.MutableComponent reply = net.minecraft.network.chat.Component.translatable("dialogue.chat.fail");
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal("<" + citizen.getDisplayName().getString() + "> ").append(reply));
+            Network.sendToPlayer(new net.conczin.mca.network.s2c.InteractionDialogueQuestionResponse(reply, false), player);
+            return;
+        }
+
         VillagerEntityMCA delegate = getOrCreateDelegate(citizen, player);
         Question question = Dialogues.getInstance().getQuestion("root");
         if (question != null) {
@@ -88,6 +112,12 @@ public class CitizenDialogueHandler {
             vl.getInteractions().handle(player, answer);
         }
 
+        CitizenMCAData data = CitizenMCAManager.getData(citizen);
+        if (data != null) {
+            data.modFatigue(1);
+            CitizenMCAManager.saveData(citizen, data);
+        }
+
         Dialogues.getInstance().selectAnswer(delegate, player, question, answer);
         syncAfterDialogue(citizen, delegate, player);
     }
@@ -98,7 +128,15 @@ public class CitizenDialogueHandler {
             Memories mem = delegate.getVillagerBrain().getMemoriesForPlayer(player);
             if (mem != null) {
                 data.setHearts(mem.getHearts());
+                data.setFatigue(Math.max(data.getFatigue(), mem.getInteractionFatigue()));
                 CitizenMCAManager.saveData(citizen, data);
+                if (citizen instanceof VillagerLike<?> vl) {
+                    Memories citMem = vl.getVillagerBrain().getMemoriesForPlayer(player);
+                    if (citMem != null) {
+                        citMem.setHearts(data.getHearts());
+                        citMem.setInteractionFatigue(data.getFatigue());
+                    }
+                }
             }
         }
     }

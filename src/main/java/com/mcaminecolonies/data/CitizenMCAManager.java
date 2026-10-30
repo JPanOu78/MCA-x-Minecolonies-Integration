@@ -75,8 +75,12 @@ public class CitizenMCAManager {
                 citizen.getNavigation().stop();
             }
 
-            // Fatigue recovery: reduce interaction fatigue by 1 every 100 ticks (5 seconds) per MCA standard
-            if (citizen.tickCount % 100 == 0) {
+            // Fatigue recovery: reduce interaction fatigue by 1 every 1200 ticks (60 seconds) per MCA standard
+            if (citizen.tickCount % 1200 == 0) {
+                if (data.getFatigue() > 0) {
+                    data.modFatigue(-1);
+                    saveData(citizen, data);
+                }
                 for (ServerPlayer player : citizen.level().getEntitiesOfClass(ServerPlayer.class, citizen.getBoundingBox().inflate(32.0))) {
                     Memories mem = vl.getVillagerBrain().getMemoriesForPlayer(player);
                     if (mem != null && mem.getInteractionFatigue() > 0) {

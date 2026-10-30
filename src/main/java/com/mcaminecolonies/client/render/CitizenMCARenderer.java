@@ -11,7 +11,12 @@ import com.minecolonies.core.client.render.RenderUtils;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import net.conczin.mca.client.render.layer.FaceLayer;
+import net.conczin.mca.Config;
+import net.conczin.mca.entity.VillagerLike;
+import net.conczin.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.resources.HairStyleList;
+import net.conczin.mca.resources.data.skin.HairStyle;
+import net.conczin.mca.resources.data.skin.LayeredHair;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.EntityModelSet;
@@ -27,9 +32,12 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * Handles rendering MineColonies Citizens with MCA-styled humanoid models, textures, layers,
- * armor, held items, growth scaling, and arm swing animations.
+ * armor, held items, growth scaling, female breasts geometry, and arm swing animations.
  */
 public class CitizenMCARenderer {
 
@@ -47,6 +55,19 @@ public class CitizenMCARenderer {
     private static CitizenMCAModel defaultFaceModel;
     private static CitizenMCAModel slimFaceModel;
 
+    private static final Map<ResourceLocation, Boolean> TEXTURE_EXISTS_CACHE = new ConcurrentHashMap<>();
+
+    public static boolean textureExists(ResourceLocation loc) {
+        if (loc == null) return false;
+        return TEXTURE_EXISTS_CACHE.computeIfAbsent(loc, key -> {
+            try {
+                return Minecraft.getInstance().getResourceManager().getResource(key).isPresent();
+            } catch (Exception e) {
+                return false;
+            }
+        });
+    }
+
     public static synchronized void ensureModelsInitialized() {
         if (defaultModel == null) {
             EntityModelSet modelSet = Minecraft.getInstance().getEntityModels();
@@ -54,8 +75,9 @@ public class CitizenMCARenderer {
             ItemInHandRenderer itemInHandRenderer = Minecraft.getInstance().getEntityRenderDispatcher().getItemInHandRenderer();
 
             if (modelSet != null && modelManager != null && itemInHandRenderer != null) {
-                defaultModel = new CitizenMCAModel(modelSet.bakeLayer(ModelLayers.PLAYER), false);
-                slimModel = new CitizenMCAModel(modelSet.bakeLayer(ModelLayers.PLAYER_SLIM), true);
+                // Initialize models using custom layer definitions including breasts & breastsWear
+                defaultModel = new CitizenMCAModel(CitizenMCAModel.createLayerDefinition(false).bakeRoot(), false);
+                slimModel = new CitizenMCAModel(CitizenMCAModel.createLayerDefinition(true).bakeRoot(), true);
 
                 HumanoidModel<AbstractEntityCitizen> innerModel = new HumanoidModel<>(modelSet.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR));
                 HumanoidModel<AbstractEntityCitizen> outerModel = new HumanoidModel<>(modelSet.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR));
@@ -69,8 +91,8 @@ public class CitizenMCARenderer {
                 defaultItemLayer = new ItemInHandLayer<>(defaultParent, itemInHandRenderer);
                 slimItemLayer = new ItemInHandLayer<>(slimParent, itemInHandRenderer);
 
-                defaultFaceModel = new CitizenMCAModel(modelSet.bakeLayer(ModelLayers.PLAYER), false);
-                slimFaceModel = new CitizenMCAModel(modelSet.bakeLayer(ModelLayers.PLAYER_SLIM), true);
+                defaultFaceModel = new CitizenMCAModel(CitizenMCAModel.createLayerDefinition(false).bakeRoot(), false);
+                slimFaceModel = new CitizenMCAModel(CitizenMCAModel.createLayerDefinition(true).bakeRoot(), true);
 
                 defaultFaceLayer = new CitizenFaceLayer(defaultParent, defaultFaceModel, "normal");
                 slimFaceLayer = new CitizenFaceLayer(slimParent, slimFaceModel, "normal");
@@ -146,7 +168,6 @@ public class CitizenMCARenderer {
         String jobName = "none";
         boolean isGuard = false;
         try {
-            // First check DATA_JOB synched entity data (always present on client)
             String synchedJob = entity.getEntityData().get(AbstractEntityCitizen.DATA_JOB);
             if (synchedJob != null && !synchedJob.isEmpty()) {
                 jobName = synchedJob;
@@ -175,7 +196,7 @@ public class CitizenMCARenderer {
                 || lowerJob.contains("combat") || lowerJob.contains("patrol") || lowerJob.contains("soldier")
                 || lowerJob.contains("mercenary");
 
-        // Fallback guard detection via held weapons / shields (e.g. Iron's spells wands/scrolls, swords, bows, shields)
+        // Fallback guard detection via held weapons / shields
         if (!isGuard) {
             net.minecraft.world.item.ItemStack mainItem = entity.getMainHandItem();
             net.minecraft.world.item.ItemStack offItem = entity.getOffhandItem();
@@ -212,6 +233,18 @@ public class CitizenMCARenderer {
         model.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
         model.applyAgeProportions(ageState);
 
+        boolean isFemale = appearance.isFemale();
+        boolean isAdult = !entity.isBaby();
+        if (entity instanceof VillagerLike<?> vl) {
+            isFemale = vl.getGenetics().getGender() == Gender.FEMALE;
+        }
+        try {
+            if (Config.getInstance() != null && !Config.getInstance().enableBoobs) {
+                isFemale = false;
+            }
+        } catch (Throwable ignored) {
+        }
+
         // 1. Render Base Human Skin Layer (Body and limbs; hide outer clothing layers)
         model.setAllVisible(true);
         model.hat.visible = false;
@@ -220,11 +253,16 @@ public class CitizenMCARenderer {
         model.rightSleeve.visible = false;
         model.leftPants.visible = false;
         model.rightPants.visible = false;
-        ResourceLocation skinTexture = appearance.getBaseSkinTexture();
-        VertexConsumer skinConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(skinTexture));
-        model.renderToBuffer(poseStack, skinConsumer, packedLight, OverlayTexture.NO_OVERLAY, appearance.getSkinColor());
+        model.breasts.visible = isFemale && isAdult;
+        model.breastsWear.visible = false;
 
-        // 2. Render Face / Expression Layer (Cutout pass with +0.0025F offset so eyes sit cleanly on front of skin)
+        ResourceLocation skinTexture = appearance.getBaseSkinTexture();
+        if (textureExists(skinTexture)) {
+            VertexConsumer skinConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(skinTexture));
+            model.renderToBuffer(poseStack, skinConsumer, packedLight, OverlayTexture.NO_OVERLAY, appearance.getSkinColor());
+        }
+
+        // 2. Render Face / Expression Layer
         if (faceLayer != null) {
             faceLayer.render(poseStack, buffer, packedLight, entity, limbSwing, limbSwingAmount, partialTicks, ageInTicks, netHeadYaw, headPitch);
         }
@@ -233,26 +271,70 @@ public class CitizenMCARenderer {
         model.setAllVisible(true);
         model.head.visible = false;
         model.hat.visible = false;
-        ResourceLocation clothingTexture = appearance.getClothingTexture(jobName);
-        VertexConsumer clothingConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(clothingTexture));
-        model.renderToBuffer(poseStack, clothingConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+        model.breasts.visible = false;
+        model.breastsWear.visible = isFemale && isAdult;
 
-        // 4. Render Hair Layer with Hair Color Tinting (Head and Hat only with +0.03F scale so hair bangs sit in front of eyes and clothes)
+        ResourceLocation clothingTexture = appearance.getClothingTexture(jobName);
+        if (textureExists(clothingTexture)) {
+            VertexConsumer clothingConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(clothingTexture));
+            model.renderToBuffer(poseStack, clothingConsumer, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+        }
+
+        // 4. Render Hair Layer with Hair Color Tinting and Layered Hair Support
         model.setAllVisible(false);
         model.head.visible = true;
         model.hat.visible = true;
+        model.breasts.visible = false;
+        model.breastsWear.visible = false;
         model.head.xScale *= 1.03F;
         model.head.yScale *= 1.03F;
         model.head.zScale *= 1.03F;
-        ResourceLocation hairTexture = appearance.getHairTexture();
-        VertexConsumer hairConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(hairTexture));
-        model.renderToBuffer(poseStack, hairConsumer, packedLight, OverlayTexture.NO_OVERLAY, appearance.getHairColor());
+
+        int hairColor = appearance.getHairColor();
+        boolean renderedHair = false;
+
+        if (entity instanceof VillagerLike<?> vl) {
+            String styleId = vl.getHairStyleId();
+            HairStyle hairStyle = null;
+            if (styleId != null && !styleId.isBlank()) {
+                try {
+                    hairStyle = HairStyleList.getInstance().get(styleId);
+                } catch (Exception ignored) {
+                }
+            }
+
+            for (LayeredHair.Category category : LayeredHair.Category.RENDER_ORDER) {
+                String layerStr = vl.getLayeredHair(category);
+                if ((layerStr == null || layerStr.isBlank()) && hairStyle != null) {
+                    layerStr = hairStyle.layer(category);
+                }
+                if (layerStr != null && !layerStr.isBlank()) {
+                    ResourceLocation tex = resolveHairResource(layerStr);
+                    if (textureExists(tex)) {
+                        renderedHair = true;
+                        VertexConsumer hairConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(tex));
+                        model.renderToBuffer(poseStack, hairConsumer, packedLight, OverlayTexture.NO_OVERLAY, hairColor);
+                    }
+                }
+            }
+        }
+
+        if (!renderedHair) {
+            ResourceLocation classicHair = appearance.getHairTexture();
+            if (textureExists(classicHair)) {
+                VertexConsumer hairConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(classicHair));
+                model.renderToBuffer(poseStack, hairConsumer, packedLight, OverlayTexture.NO_OVERLAY, hairColor);
+            }
+        }
+
         model.head.xScale /= 1.03F;
         model.head.yScale /= 1.03F;
         model.head.zScale /= 1.03F;
 
         // Reset all parts visible for armor and held items
         model.setAllVisible(true);
+        model.breasts.visible = false;
+        model.breastsWear.visible = false;
 
         // 5. Render Citizen Armor Layer (Helmet, Chestplate, Leggings, Boots)
         if (armorLayer != null) {
@@ -266,5 +348,19 @@ public class CitizenMCARenderer {
 
         poseStack.popPose();
         return true;
+    }
+
+    private static ResourceLocation resolveHairResource(String path) {
+        if (path == null || path.isBlank() || path.equals("none")) return null;
+        try {
+            if (path.contains(":")) {
+                return ResourceLocation.parse(path);
+            }
+            if (path.startsWith("/")) path = path.substring(1);
+            if (!path.startsWith("skins/")) path = "skins/" + path;
+            return ResourceLocation.fromNamespaceAndPath("mca", path);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
