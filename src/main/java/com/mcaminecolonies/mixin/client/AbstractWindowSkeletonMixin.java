@@ -1,6 +1,7 @@
 package com.mcaminecolonies.mixin.client;
 
 import com.ldtteam.blockui.views.BOWindow;
+import com.mcaminecolonies.client.gui.VisitorInteractionState;
 import com.minecolonies.api.colony.IVisitorViewData;
 import com.minecolonies.core.client.gui.AbstractWindowSkeleton;
 import com.minecolonies.core.client.gui.WindowInteraction;
@@ -27,13 +28,13 @@ public abstract class AbstractWindowSkeletonMixin {
         if ((Object) this instanceof WindowInteraction && this.parent instanceof MainWindowCitizen mwc) {
             if (mwc.getCitizen() instanceof IVisitorViewData
                     || (mwc.getCitizen() != null && mwc.getCitizen().getClass().getName().contains("Visitor"))) {
-                if (!WindowInteractionMixin.isShowStatsRequested()) {
+                if (!VisitorInteractionState.isShowStatsRequested()) {
                     // Safely close WindowInteraction without opening the citizen window for visitors on cancel / not now / ESC
                     Minecraft.getInstance().setScreen(null);
                     ci.cancel();
                 } else {
                     // Reset flag so subsequent closes won't reuse it
-                    WindowInteractionMixin.setShowStatsRequested(false);
+                    VisitorInteractionState.setShowStatsRequested(false);
                 }
             }
         }
