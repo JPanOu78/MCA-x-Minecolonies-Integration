@@ -194,7 +194,8 @@ public class CitizenMCARenderer {
         isGuard = lowerJob.contains("guard") || lowerJob.contains("knight") || lowerJob.contains("archer")
                 || lowerJob.contains("ranger") || lowerJob.contains("druid") || lowerJob.contains("mage")
                 || lowerJob.contains("combat") || lowerJob.contains("patrol") || lowerJob.contains("soldier")
-                || lowerJob.contains("mercenary");
+                || lowerJob.contains("mercenary") || lowerJob.contains("gunner") || lowerJob.contains("gun")
+                || lowerJob.contains("marksman") || lowerJob.contains("artificer");
 
         // Fallback guard detection via held weapons / shields
         if (!isGuard) {
@@ -208,7 +209,9 @@ public class CitizenMCARenderer {
                     || mainItem.getItem() instanceof net.minecraft.world.item.ShieldItem
                     || offItem.getItem() instanceof net.minecraft.world.item.ShieldItem
                     || mainItemName.contains("wand") || mainItemName.contains("staff") || mainItemName.contains("spell")
-                    || offItemName.contains("spell") || offItemName.contains("shield")) {
+                    || offItemName.contains("spell") || offItemName.contains("shield")
+                    || mainItemName.contains("gun") || mainItemName.contains("musket") || mainItemName.contains("pistol")
+                    || mainItemName.contains("rifle") || mainItemName.contains("blunderbuss") || mainItemName.contains("arquebus")) {
                 isGuard = true;
             }
         }

@@ -285,7 +285,7 @@ public class CitizenAppearance {
             return "weaponsmith";
         } else if (lower.contains("knight") || lower.contains("guard") || lower.contains("patrol") || lower.contains("combat") || lower.contains("shield")) {
             return "guard";
-        } else if (lower.contains("archer") || lower.contains("ranger") || lower.contains("bow")) {
+        } else if (lower.contains("archer") || lower.contains("ranger") || lower.contains("bow") || lower.contains("gun") || lower.contains("marksman")) {
             return "archer";
         } else if (lower.contains("smelt") || lower.contains("tool") || lower.contains("carpenter") || lower.contains("sawmill") || lower.contains("mechan") || lower.contains("builder") || lower.contains("crafter")) {
             return "toolsmith";
