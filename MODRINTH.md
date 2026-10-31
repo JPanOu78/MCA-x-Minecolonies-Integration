@@ -36,9 +36,7 @@ Tired of the standard blocky, big-nosed villagers running around your colony? Wa
 ---
 
 ### 💬 3. Interactive Dialogue & Fatigue System
-- **Two-Way GUI Navigation**:
-  - **💬 Talk Button**: Open any citizen's MineColonies window (`MainWindowCitizen`) and click **💬 Talk** in the top-right corner to open MCA's `InteractScreen`.
-  - **📊 Stats Button**: While interacting in MCA's `InteractScreen`, click **📊 Stats** in the top-right corner to instantly open MineColonies' `MainWindowCitizen` and view all 11 skill stats (Athletics, Dexterity, Strength, Agility, Stamina, Mana, Adaptability, Focus, Creativity, Knowledge, Intelligence), health, saturation, and happiness.
+- **In-GUI Talk Button**: Open any citizen's MineColonies window (`MainWindowCitizen`) and click **💬 Talk** in the top-right corner to open MCA's `InteractScreen`.
 - **Multi-Branch Conversations**: Chat, Joke, Story, Flirt, Kiss, Hug, Play (Rock-Paper-Scissors), Apologize, Rumors, and Hire.
 - **Personality-Driven Responses**: Responses reflect the citizen's unique traits, mood, and relationship with you.
 - **Fatigue & Anti-Spam Mechanics**:
@@ -111,7 +109,7 @@ This mod requires **Minecraft 1.21.1** with **NeoForge**:
 **A:** Yes! You can interact, give gifts, propose with an Engagement Ring, and marry them using MCA Reborn's relationship items.
 
 #### Q: Does it support MineColonies addons like MineColonies Mages?
-**A:** Yes! Built-in binary shims ensure addons (such as MineColonies Mages) can assign and employ specialized guards (Mages, etc.) in Guard Towers without crashes.
+**A:** Yes! Standalone and modular design: runs smoothly on its own without requiring any optional addon mods.
 
 #### Q: Does Creative Mode bypass conversation limits?
 **A:** No, MCA Reborn's fatigue and gift saturation rules apply universally to provide a balanced and immersive roleplay experience.

@@ -33,9 +33,7 @@ Every MineColonies citizen is rendered as an MCA Reborn human with 3D models, la
 - **Colony Graduation**: When a child grows into an adult, they seamlessly become a full MineColonies worker citizen.
 
 ### 3. 💬 MCA Dialogue System & Fatigue Mechanics
-- **Two-Way GUI Navigation**:
-  - **💬 Talk Button**: Open any citizen's MineColonies window (`MainWindowCitizen`) and click the **💬 Talk Button** in the top-right corner to open MCA's native `InteractScreen`.
-  - **📊 Stats Button**: While interacting in MCA's `InteractScreen`, click the **📊 Stats** button in the top-right corner to instantly open MineColonies' `MainWindowCitizen` and view all 11 skill stats, health, saturation, happiness, and work assignments.
+- **In-GUI Talk Button**: Open any citizen's MineColonies window (`MainWindowCitizen`) and click the **💬 Talk Button** in the top-right corner to open MCA's native `InteractScreen`.
 - **Multi-Turn Interactive Dialogue**:
   - Full conversational topics: **Chat**, **Tell Joke**, **Story**, **Flirt**, **Kiss**, **Hug**, **Play** (Rock-Paper-Scissors for kids), **Apologize**, **Rumors**, and **Hire**.
   - Citizen responses reflect their unique traits, mood, and personality.

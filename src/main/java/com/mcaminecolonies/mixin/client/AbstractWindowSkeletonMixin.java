@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Prevents WindowInteraction for MineColonies Visitors from falling back to open MainWindowCitizen
- * upon closing or canceling the recruit window.
+ * upon closing or canceling the recruit window, unless the player explicitly clicked "Show citizen stats".
  */
 @Mixin(value = AbstractWindowSkeleton.class, remap = false)
 public abstract class AbstractWindowSkeletonMixin {
@@ -27,9 +27,14 @@ public abstract class AbstractWindowSkeletonMixin {
         if ((Object) this instanceof WindowInteraction && this.parent instanceof MainWindowCitizen mwc) {
             if (mwc.getCitizen() instanceof IVisitorViewData
                     || (mwc.getCitizen() != null && mwc.getCitizen().getClass().getName().contains("Visitor"))) {
-                // Safely close WindowInteraction without opening the citizen window for visitors
-                Minecraft.getInstance().setScreen(null);
-                ci.cancel();
+                if (!WindowInteractionMixin.isShowStatsRequested()) {
+                    // Safely close WindowInteraction without opening the citizen window for visitors on cancel / not now / ESC
+                    Minecraft.getInstance().setScreen(null);
+                    ci.cancel();
+                } else {
+                    // Reset flag so subsequent closes won't reuse it
+                    WindowInteractionMixin.setShowStatsRequested(false);
+                }
             }
         }
     }
