@@ -68,12 +68,16 @@ Instead of running as two separate systems, this mod builds a bridge between the
 
 ---
 
-## 📦 Requirements
+## 📦 Requirements & Tested Versions
 
-- **Minecraft**: `1.21.1`
-- **NeoForge**: `21.1.x` or higher
-- **MineColonies**: `1.21.1` (with `Structurize`, `BlockUI`, `Multi-Piston`, `Domum Ornamentum`)
-- **MCA Reborn**: `7.7.36-beta.3+1.21.1` or higher
+| Mod | Tested Version | Required? |
+| :--- | :--- | :--- |
+| **Minecraft** | `1.21.1` | **Required** |
+| **NeoForge** | `21.1.249` (or `21.1.84`+) | **Required** |
+| **[MineColonies](https://modrinth.com/mod/minecolonies)** | `1.1.1403-1.21.1` | **Required** |
+| **[Structurize](https://modrinth.com/mod/structurize)** | `1.0.832-1.21.1` | **Required** (MineColonies Core) |
+| **[BlockUI](https://modrinth.com/mod/blockui)** | `1.0.209-1.21.1` | **Required** (MineColonies Core) |
+| **[MCA Reborn](https://modrinth.com/mod/minecraft-comes-alive-reborn)** | `7.7.36-beta.3+1.21.1` | **Required** |
 
 ---
 
