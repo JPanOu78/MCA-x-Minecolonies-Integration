@@ -56,6 +56,11 @@ public class CitizenDialogueScreen extends Screen {
     protected void init() {
         super.init();
 
+        if (this.citizen instanceof net.conczin.mca.entity.VillagerLike<?> vl) {
+            Minecraft.getInstance().setScreen(new net.conczin.mca.client.gui.InteractScreen(vl));
+            return;
+        }
+
         int centerX = this.width / 2;
         int centerY = this.height / 2;
 

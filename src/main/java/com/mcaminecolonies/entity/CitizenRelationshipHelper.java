@@ -56,13 +56,16 @@ public class CitizenRelationshipHelper {
         }
 
         ServerLevel level = player.serverLevel();
+        syncColonyFamilyTree(citizen, level);
+
         PlayerSaveData playerData = PlayerSaveData.get(player);
         Memories memories = vl.getVillagerBrain().getMemoriesForPlayer(player);
         int currentHearts = memories.getHearts();
 
         CompassionateEntity<?> comp = (citizen instanceof CompassionateEntity<?> c) ? c : null;
         java.util.Optional<EntityRelationship> relOpt = EntityRelationship.of(citizen);
-        boolean isCitizenMarried = relOpt.map(EntityRelationship::isMarried).orElse(false);
+        boolean hasColonyPartner = citizen.getCitizenData() != null && citizen.getCitizenData().getPartner() != null;
+        boolean isCitizenMarried = relOpt.map(EntityRelationship::isMarried).orElse(false) || hasColonyPartner;
         boolean isCitizenEngaged = relOpt.map(EntityRelationship::isEngaged).orElse(false);
         boolean isEngagedToPlayer = relOpt.map(r -> r.isEngagedWith(player.getUUID())).orElse(false)
                 || (comp != null && Relationship.IS_ENGAGED.test(comp, player))
@@ -229,7 +232,62 @@ public class CitizenRelationshipHelper {
         data.setHearts(memories.getHearts());
         CitizenMCAManager.saveData(citizen, data);
 
+        if (citizen.getCitizenData() != null) {
+            citizen.getCitizenData().increaseSaturation(2.0D);
+        }
+
         return true;
+    }
+
+    /**
+     * Synchronizes MineColonies partner and parent-child relationships into MCA Reborn's FamilyTree
+     * so that Colony families appear accurately in the Family Tree Book and prevent conflicting marriages.
+     */
+    public static void syncColonyFamilyTree(AbstractEntityCitizen citizen, ServerLevel level) {
+        if (citizen == null || level == null || citizen.getCitizenData() == null) {
+            return;
+        }
+        try {
+            FamilyTree tree = FamilyTree.get(level);
+            FamilyTreeNode citizenNode = tree.getOrCreate(citizen);
+            com.minecolonies.api.colony.ICitizenData cData = citizen.getCitizenData();
+
+            // 1. Sync Partner
+            com.minecolonies.api.colony.ICitizenData partnerData = cData.getPartner();
+            if (partnerData != null && citizenNode.getRelationshipState() != RelationshipState.MARRIED_TO_PLAYER
+                    && citizenNode.getRelationshipState() != RelationshipState.ENGAGED
+                    && citizenNode.getRelationshipState() != RelationshipState.PROMISED) {
+                FamilyTreeNode partnerNode = partnerData.getEntity()
+                        .map(tree::getOrCreate)
+                        .orElseGet(() -> tree.getOrCreate(
+                                partnerData.getUUID(),
+                                partnerData.getName(),
+                                partnerData.isFemale() ? net.conczin.mca.entity.ai.relationship.Gender.FEMALE : net.conczin.mca.entity.ai.relationship.Gender.MALE
+                        ));
+                citizenNode.updatePartner(partnerNode);
+                citizenNode.setRelationshipState(RelationshipState.MARRIED_TO_VILLAGER);
+                partnerNode.setRelationshipState(RelationshipState.MARRIED_TO_VILLAGER);
+            }
+
+            // 2. Sync Children
+            if (cData.getChildren() != null && cData.getColony() != null && cData.getColony().getCitizenManager() != null) {
+                for (Integer childId : cData.getChildren()) {
+                    if (childId == null) continue;
+                    com.minecolonies.api.colony.ICitizenData childData = cData.getColony().getCitizenManager().getCivilian(childId);
+                    if (childData != null) {
+                        FamilyTreeNode childNode = childData.getEntity()
+                                .map(tree::getOrCreate)
+                                .orElseGet(() -> tree.getOrCreate(
+                                        childData.getUUID(),
+                                        childData.getName(),
+                                        childData.isFemale() ? net.conczin.mca.entity.ai.relationship.Gender.FEMALE : net.conczin.mca.entity.ai.relationship.Gender.MALE
+                                ));
+                        childNode.assignParent(citizenNode);
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private static void reject(ServerPlayer player, VillagerLike<?> vl, AbstractEntityCitizen citizen, String translationKey) {

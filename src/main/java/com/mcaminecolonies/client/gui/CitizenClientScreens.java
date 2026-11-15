@@ -25,7 +25,9 @@ public class CitizenClientScreens {
     }
 
     public static void openCustomizationScreen(AbstractEntityCitizen citizen) {
-        Minecraft.getInstance().setScreen(new CitizenCustomizationScreen(citizen));
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().setScreen(new LimitedVillagerEditorScreen(citizen.getUUID(), Minecraft.getInstance().player.getUUID()));
+        }
     }
 }
 

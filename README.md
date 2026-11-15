@@ -86,7 +86,7 @@ Rather than running as two disconnected systems, this mod builds a bidirectional
 ## 🚀 Installation
 
 1. Install **Minecraft 1.21.1** with **NeoForge**.
-2. Place `mcaminecolonies-1.0.0.jar` along with **MineColonies** and **MCA Reborn** in your `.minecraft/mods` folder.
+2. Place `mcaminecolonies-1.0.1.jar` along with **MineColonies** and **MCA Reborn** in your `.minecraft/mods` folder.
 3. Launch the game. Existing and newly spawned colony citizens will automatically render and interact through the bridge.
 
 ---
@@ -99,7 +99,7 @@ cd MCA-x-Minecolonies-Integration
 ./gradlew build
 ```
 
-Compiled JAR will be at `build/libs/mcaminecolonies-1.0.0.jar`.
+Compiled JAR will be at `build/libs/mcaminecolonies-1.0.1.jar`.
 
 ---
 

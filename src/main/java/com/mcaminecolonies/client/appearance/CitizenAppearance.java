@@ -87,8 +87,8 @@ public class CitizenAppearance {
         this.clothingIndex = data.getClothingIndex();
 
         this.customSkin = (data.getCustomSkin() != null && !data.getCustomSkin().isEmpty()) ? data.getCustomSkin() : null;
-        this.customClothes = (vClothes != null && !vClothes.isEmpty() && !vClothes.contains("/baby/")) ? vClothes : data.getCustomClothes();
-        this.customHair = (vHair != null && !vHair.isEmpty()) ? vHair : data.getCustomHair();
+        this.customClothes = (data.isCustomized() && data.getCustomClothes() != null && !data.getCustomClothes().isEmpty() && !data.getCustomClothes().contains("/baby/")) ? data.getCustomClothes() : null;
+        this.customHair = (data.isCustomized() && data.getCustomHair() != null && !data.getCustomHair().isEmpty()) ? data.getCustomHair() : null;
 
         int resolvedHairColor = CitizenMCAData.DEFAULT_HAIR_COLOR;
         if (vHairDye != 0 && vHairDye != -16777216) {
@@ -275,19 +275,21 @@ public class CitizenAppearance {
         if (job == null) return "none";
         String lower = job.toLowerCase();
 
-        if (lower.contains("farm") || lower.contains("lumber") || lower.contains("forester") || lower.contains("plant") || lower.contains("florist") || lower.contains("bee") || lower.contains("compost")) {
+        if (lower.contains("farm") || lower.contains("lumber") || lower.contains("forester") || lower.contains("plant") || lower.contains("florist") || lower.contains("bee") || lower.contains("compost") || lower.contains("orchard")) {
             return "farmer";
         } else if (lower.contains("fish")) {
             return "fisherman";
         } else if (lower.contains("miner") || lower.contains("quarry") || lower.contains("nether")) {
             return "miner";
+        } else if (lower.contains("butcher")) {
+            return "butcher";
         } else if (lower.contains("blacksmith") || lower.contains("weapon")) {
             return "weaponsmith";
         } else if (lower.contains("knight") || lower.contains("guard") || lower.contains("patrol") || lower.contains("combat") || lower.contains("shield")) {
             return "guard";
         } else if (lower.contains("archer") || lower.contains("ranger") || lower.contains("bow") || lower.contains("gun") || lower.contains("marksman")) {
             return "archer";
-        } else if (lower.contains("smelt") || lower.contains("tool") || lower.contains("carpenter") || lower.contains("sawmill") || lower.contains("mechan") || lower.contains("builder") || lower.contains("crafter")) {
+        } else if (lower.contains("smelt") || lower.contains("tool") || lower.contains("carpenter") || lower.contains("sawmill") || lower.contains("mechan") || lower.contains("builder") || lower.contains("crafter") || lower.contains("fluid")) {
             return "toolsmith";
         } else if (lower.contains("stone") || lower.contains("mason") || lower.contains("concrete") || lower.contains("brick")) {
             return "mason";

@@ -4,7 +4,7 @@ license="GPL-3.0"
 
 [[mods]]
 modId="mcaminecolonies"
-version="1.0.0"
+version="1.0.2"
 displayName="MCA x Minecolonies"
 description='''
 Replaces Minecolonies Citizen 3D models with MCA (Minecraft Comes Alive) Reborn villagers while preserving all Minecolonies worker behaviors, jobs, and mechanics.

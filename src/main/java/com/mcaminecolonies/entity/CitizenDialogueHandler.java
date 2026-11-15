@@ -104,27 +104,67 @@ public class CitizenDialogueHandler {
         delegate.setCustomName(citizen.getCustomName());
 
         // Sync genetics, gender, and traits from citizen
+        CitizenMCAData data = CitizenMCAManager.getData(citizen);
         if (citizen instanceof VillagerLike<?> vl) {
+            if (vl.getVillagerBrain().getPersonality() == net.conczin.mca.entity.ai.relationship.Personality.UNASSIGNED && data != null) {
+                vl.getVillagerBrain().setPersonality(data.getMCAPersonality());
+            }
             delegate.copyVillagerAttributesFrom(vl);
             if (vl.getGenetics() != null) {
                 delegate.getGenetics().setGender(vl.getGenetics().getGender());
             }
+            delegate.getVillagerBrain().setPersonality(vl.getVillagerBrain().getPersonality());
+        } else if (data != null) {
+            delegate.getVillagerBrain().setPersonality(data.getMCAPersonality());
         }
 
-        // Sync hearts & memories
-        CitizenMCAData data = CitizenMCAManager.getData(citizen);
-        if (data != null) {
+        // Sync MineColonies happiness into MCA VillagerBrain mood (-15 to +15)
+        if (citizen.getCitizenData() != null && citizen.getCitizenData().getColony() != null
+                && citizen.getCitizenData().getCitizenHappinessHandler() != null) {
+            try {
+                double colonyHappiness = citizen.getCitizenData().getCitizenHappinessHandler()
+                        .getHappiness(citizen.getCitizenData().getColony(), citizen.getCitizenData());
+                int targetMood = (int) Math.round((colonyHappiness - 5.0D) * 3.0D);
+                int currentMood = delegate.getVillagerBrain().getMoodValue();
+                if (Math.abs(targetMood - currentMood) > 2) {
+                    delegate.getVillagerBrain().modifyMoodValue(targetMood - currentMood);
+                    if (citizen instanceof VillagerLike<?> vl) {
+                        vl.getVillagerBrain().modifyMoodValue(targetMood - vl.getVillagerBrain().getMoodValue());
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        // Ensure MineColonies family/partner links are reflected in MCA FamilyTree
+        CitizenRelationshipHelper.syncColonyFamilyTree(citizen, player.serverLevel());
+
+        // Sync hearts & memories from the citizen's per-player VillagerBrain Memories (default 0 for Strangers)
+        if (citizen instanceof VillagerLike<?> vl) {
+            boolean hasPlayerMemory = vl.getVillagerBrain().getMemories().containsKey(player.getUUID());
+            Memories citMem = vl.getVillagerBrain().getMemoriesForPlayer(player);
+            if (!hasPlayerMemory && citMem != null) {
+                citMem.setHearts(0);
+                citMem.setInteractionFatigue(0);
+                if (data != null && data.getHearts() == 50) {
+                    data.setHearts(0);
+                    CitizenMCAManager.saveData(citizen, data);
+                }
+            }
+            Memories mem = delegate.getVillagerBrain().getMemoriesForPlayer(player);
+            if (mem != null && citMem != null) {
+                mem.setHearts(citMem.getHearts());
+                mem.setInteractionFatigue(citMem.getInteractionFatigue());
+            }
+            if (data != null && citMem != null) {
+                data.setHearts(citMem.getHearts());
+                data.setFatigue(citMem.getInteractionFatigue());
+            }
+        } else if (data != null) {
             Memories mem = delegate.getVillagerBrain().getMemoriesForPlayer(player);
             if (mem != null) {
                 mem.setHearts(data.getHearts());
                 mem.setInteractionFatigue(data.getFatigue());
-            }
-            if (citizen instanceof VillagerLike<?> vl) {
-                Memories citMem = vl.getVillagerBrain().getMemoriesForPlayer(player);
-                if (citMem != null) {
-                    citMem.setHearts(data.getHearts());
-                    citMem.setInteractionFatigue(data.getFatigue());
-                }
             }
         }
 
@@ -201,9 +241,10 @@ public class CitizenDialogueHandler {
 
         CitizenVillagerDelegate delegate = getOrCreateDelegate(citizen, player);
 
-        // Forward non-dialogue movement commands to citizen directly (stay, follow, move, etc.)
-        if (citizen instanceof VillagerLike<?> vl && !isDialogueTopic(answer)) {
+        // Forward non-dialogue movement/utility commands to citizen directly (stay, follow, move, gohome, etc.)
+        if (citizen instanceof VillagerLike<?> vl && isDirectCommand(answer)) {
             vl.getInteractions().handle(player, answer);
+            return;
         }
 
         if (data != null && isDialogueTopic(answer)) {
@@ -213,6 +254,16 @@ public class CitizenDialogueHandler {
 
         Dialogues.getInstance().selectAnswer(delegate, player, question, answer);
         syncAfterDialogue(citizen, delegate, player);
+    }
+
+    private static boolean isDirectCommand(String cmd) {
+        if (cmd == null) return false;
+        if (net.conczin.mca.entity.ai.MoveState.byCommand(cmd).isPresent()) return true;
+        if (cmd.equals("gift") || cmd.startsWith("gift.")) return true;
+        return switch (cmd) {
+            case "gohome", "sethome", "pick_up", "ridehorse", "armor" -> true;
+            default -> false;
+        };
     }
 
     private static boolean isDialogueTopic(String cmd) {
@@ -230,7 +281,12 @@ public class CitizenDialogueHandler {
         if (data != null) {
             Memories mem = delegate.getVillagerBrain().getMemoriesForPlayer(player);
             if (mem != null) {
-                data.setHearts(mem.getHearts());
+                int oldHearts = data.getHearts();
+                int newHearts = mem.getHearts();
+                if (newHearts > oldHearts && citizen.getCitizenData() != null) {
+                    citizen.getCitizenData().increaseSaturation(0.25D);
+                }
+                data.setHearts(newHearts);
                 data.setFatigue(Math.max(data.getFatigue(), mem.getInteractionFatigue()));
                 CitizenMCAManager.saveData(citizen, data);
                 if (citizen instanceof VillagerLike<?> vl) {

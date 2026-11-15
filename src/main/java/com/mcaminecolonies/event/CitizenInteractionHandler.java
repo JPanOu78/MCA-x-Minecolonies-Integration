@@ -83,6 +83,8 @@ public class CitizenInteractionHandler {
         if (itemId.contains("family_tree") || itemId.contains("book_family")) {
             if (event.getLevel().isClientSide()) {
                 CitizenClientScreens.openFamilyTree(citizen);
+            } else if (event.getLevel() instanceof ServerLevel serverLevel) {
+                CitizenRelationshipHelper.syncColonyFamilyTree(citizen, serverLevel);
             }
             event.setCanceled(true);
             event.setCancellationResult(InteractionResult.sidedSuccess(event.getLevel().isClientSide()));
@@ -104,6 +106,9 @@ public class CitizenInteractionHandler {
             int color = getDyeRgb(dyeItem.getDyeColor());
             data.setHairColor(color);
             data.setCustomized(true);
+            if (citizen instanceof net.conczin.mca.entity.VillagerLike<?> vl) {
+                vl.setHairDye(color);
+            }
             modified = true;
 
             if (!player.isCreative()) {
@@ -116,7 +121,12 @@ public class CitizenInteractionHandler {
         // 8. Comb / Shears -> Cycle Hairstyle
         else if (itemId.contains("comb") || item == Items.SHEARS) {
             data.setHairIndex(data.getHairIndex() + 1);
+            data.setCustomHair(null);
             data.setCustomized(true);
+            if (citizen instanceof net.conczin.mca.entity.VillagerLike<?> vl) {
+                String genderDir = data.isFemale() ? "female" : "male";
+                vl.setHair("mca:skins/hair/" + genderDir + "/" + (data.getHairIndex() % 40) + ".png");
+            }
             modified = true;
 
             playEffect(citizen, SoundEvents.SHEEP_SHEAR, ParticleTypes.CRIT);
@@ -125,6 +135,7 @@ public class CitizenInteractionHandler {
         // 9. Needle & Thread -> Cycle Clothing
         else if (itemId.contains("needle") || itemId.contains("sewing")) {
             data.setClothingIndex(data.getClothingIndex() + 1);
+            data.setCustomClothes(null);
             data.setCustomized(true);
             modified = true;
 
@@ -134,6 +145,12 @@ public class CitizenInteractionHandler {
         // 10. Potion of Femininity -> Set Female
         else if (itemId.contains("potion_of_femininity") || itemId.contains("feminine")) {
             citizen.setFemale(true);
+            if (citizen.getCitizenData() != null) {
+                citizen.getCitizenData().setGender(true);
+            }
+            if (citizen instanceof net.conczin.mca.entity.VillagerLike<?> vl && vl.getGenetics() != null) {
+                vl.getGenetics().setGender(net.conczin.mca.entity.ai.relationship.Gender.FEMALE);
+            }
             data.setFemale(true);
             data.setCustomized(true);
             modified = true;
@@ -149,6 +166,12 @@ public class CitizenInteractionHandler {
         // 11. Potion of Masculinity -> Set Male
         else if (itemId.contains("potion_of_masculinity") || itemId.contains("masculine")) {
             citizen.setFemale(false);
+            if (citizen.getCitizenData() != null) {
+                citizen.getCitizenData().setGender(false);
+            }
+            if (citizen instanceof net.conczin.mca.entity.VillagerLike<?> vl && vl.getGenetics() != null) {
+                vl.getGenetics().setGender(net.conczin.mca.entity.ai.relationship.Gender.MALE);
+            }
             data.setFemale(false);
             data.setCustomized(true);
             modified = true;
@@ -178,10 +201,29 @@ public class CitizenInteractionHandler {
 
             if (data.getAge() >= CitizenAgeState.ADULT.getMinAge()) {
                 citizen.setIsChild(false);
+                citizen.getEntityData().set(AbstractEntityCitizen.DATA_IS_CHILD, false);
+                if (citizen.getCitizenData() != null) {
+                    citizen.getCitizenData().setIsChild(false);
+                }
+                if (citizen instanceof net.conczin.mca.entity.VillagerLike<?> vl) {
+                    vl.setTrackedValue(net.conczin.mca.entity.VillagerLike.AGE_STATE, net.conczin.mca.entity.ai.relationship.AgeState.ADULT);
+                }
                 data.setAge(CitizenAgeState.ADULT.getMinAge());
+                citizen.refreshDimensions();
                 player.displayClientMessage(Component.literal("§aThe child has fully grown into an adult citizen!"), true);
             } else {
                 CitizenAgeState newState = data.getAgeState(citizen.isBaby());
+                if (citizen instanceof net.conczin.mca.entity.VillagerLike<?> vl) {
+                    net.conczin.mca.entity.ai.relationship.AgeState mcaStage = switch (newState) {
+                        case BABY -> net.conczin.mca.entity.ai.relationship.AgeState.BABY;
+                        case TODDLER -> net.conczin.mca.entity.ai.relationship.AgeState.TODDLER;
+                        case CHILD -> net.conczin.mca.entity.ai.relationship.AgeState.CHILD;
+                        case TEEN -> net.conczin.mca.entity.ai.relationship.AgeState.TEEN;
+                        case ADULT -> net.conczin.mca.entity.ai.relationship.AgeState.ADULT;
+                    };
+                    vl.setTrackedValue(net.conczin.mca.entity.VillagerLike.AGE_STATE, mcaStage);
+                }
+                citizen.refreshDimensions();
                 player.displayClientMessage(Component.literal("§eGrowth accelerated! Current stage: " + newState.getDisplayName()), true);
             }
         }

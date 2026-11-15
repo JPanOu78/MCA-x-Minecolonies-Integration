@@ -28,6 +28,7 @@ public class CitizenMCAData {
     private int fatigue;
     private boolean isCustomized;
     private UUID followTarget;
+    private String moveState = "MOVE";
 
     public static final int DEFAULT_HAIR_COLOR = 0xFF4A2A18; // Natural Brown
     public static final int[] NATURAL_HAIR_COLORS = {
@@ -49,7 +50,7 @@ public class CitizenMCAData {
         this.hairColor = DEFAULT_HAIR_COLOR;
         this.clothingIndex = 0;
         this.personality = "friendly";
-        this.hearts = 50;
+        this.hearts = 0;
         this.isCustomized = false;
     }
 
@@ -76,7 +77,7 @@ public class CitizenMCAData {
 
         String[] personalities = {"friendly", "playful", "serious", "shy", "flirty", "brave"};
         data.setPersonality(personalities[(seed1 / 17) % personalities.length]);
-        data.setHearts(50);
+        data.setHearts(0);
 
         if (isChild) {
             data.setAge(0); // newborn baby
@@ -107,6 +108,7 @@ public class CitizenMCAData {
         tag.putInt("Fatigue", this.fatigue);
         tag.putBoolean("IsCustomized", this.isCustomized);
         if (this.followTarget != null) tag.putUUID("FollowTarget", this.followTarget);
+        if (this.moveState != null) tag.putString("MoveState", this.moveState);
         return tag;
     }
 
@@ -140,10 +142,11 @@ public class CitizenMCAData {
         if (tag.contains("CustomClothes")) data.customClothes = tag.getString("CustomClothes");
         if (tag.contains("CustomHair")) data.customHair = tag.getString("CustomHair");
         data.personality = tag.contains("Personality") ? tag.getString("Personality") : "friendly";
-        data.hearts = tag.contains("Hearts") ? tag.getInt("Hearts") : 50;
+        data.hearts = tag.contains("Hearts") ? tag.getInt("Hearts") : 0;
         data.fatigue = tag.contains("Fatigue") ? tag.getInt("Fatigue") : 0;
         data.isCustomized = tag.getBoolean("IsCustomized");
         if (tag.hasUUID("FollowTarget")) data.followTarget = tag.getUUID("FollowTarget");
+        data.moveState = tag.contains("MoveState") ? tag.getString("MoveState") : "MOVE";
         return data;
     }
 
@@ -268,7 +271,7 @@ public class CitizenMCAData {
     }
 
     public void setHearts(int hearts) {
-        this.hearts = Math.max(0, Math.min(100, hearts));
+        this.hearts = Math.max(-100, Math.min(1000, hearts));
     }
 
     public void addHearts(int delta) {
@@ -301,6 +304,33 @@ public class CitizenMCAData {
 
     public void setFollowTarget(UUID followTarget) {
         this.followTarget = followTarget;
+    }
+
+    public String getMoveState() {
+        return moveState != null ? moveState : "MOVE";
+    }
+
+    public void setMoveState(String moveState) {
+        this.moveState = moveState != null ? moveState : "MOVE";
+    }
+
+    public net.conczin.mca.entity.ai.relationship.Personality getMCAPersonality() {
+        if (this.personality == null) {
+            return net.conczin.mca.entity.ai.relationship.Personality.FRIENDLY;
+        }
+        return switch (this.personality.toLowerCase()) {
+            case "playful" -> net.conczin.mca.entity.ai.relationship.Personality.PLAYFUL;
+            case "serious" -> net.conczin.mca.entity.ai.relationship.Personality.RELAXED;
+            case "shy" -> net.conczin.mca.entity.ai.relationship.Personality.INTROVERTED;
+            case "flirty" -> net.conczin.mca.entity.ai.relationship.Personality.FLIRTY;
+            case "brave" -> net.conczin.mca.entity.ai.relationship.Personality.UPBEAT;
+            case "gloomy" -> net.conczin.mca.entity.ai.relationship.Personality.GLOOMY;
+            case "sensitive" -> net.conczin.mca.entity.ai.relationship.Personality.SENSITIVE;
+            case "greedy" -> net.conczin.mca.entity.ai.relationship.Personality.GREEDY;
+            case "crabby" -> net.conczin.mca.entity.ai.relationship.Personality.CRABBY;
+            case "extroverted" -> net.conczin.mca.entity.ai.relationship.Personality.EXTROVERTED;
+            default -> net.conczin.mca.entity.ai.relationship.Personality.FRIENDLY;
+        };
     }
 
     public CitizenAgeState getAgeState(boolean isMinecoloniesChild) {

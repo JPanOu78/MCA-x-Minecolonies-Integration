@@ -158,30 +158,40 @@ public class CitizenGiftHelper {
         int moodChange = (int) (totalSatisfaction * Config.getInstance().giftMoodEffect
                 + Config.getInstance().baseGiftMoodEffect * Math.signum(totalSatisfaction));
         delegate.getVillagerBrain().modifyMoodValue(moodChange);
-
-        // Update hearts & fatigue
-        if (data != null) {
-            data.addHearts(totalSatisfaction);
-            data.modFatigue(1);
-            CitizenMCAManager.saveData(citizen, data);
+        if (citizen instanceof VillagerLike<?> vl) {
+            vl.getVillagerBrain().modifyMoodValue(moodChange);
         }
 
+        // Boost MineColonies citizen saturation on positive gifts
+        if (totalSatisfaction > 0 && citizen.getCitizenData() != null) {
+            citizen.getCitizenData().increaseSaturation(Math.min(2.0D, totalSatisfaction * 0.1D));
+        }
+
+        // Update hearts & fatigue
         Memories mem = delegate.getVillagerBrain().getMemoriesForPlayer(player);
         if (mem != null) {
             mem.modHearts(totalSatisfaction);
             mem.modInteractionFatigue(1);
         }
 
+        int updatedHearts = mem != null ? mem.getHearts() : 0;
         if (citizen instanceof VillagerLike<?> vl) {
             Memories citMem = vl.getVillagerBrain().getMemoriesForPlayer(player);
             if (citMem != null) {
                 citMem.modHearts(totalSatisfaction);
                 citMem.modInteractionFatigue(1);
+                updatedHearts = citMem.getHearts();
             }
         }
 
+        if (data != null) {
+            data.setHearts(updatedHearts);
+            data.modFatigue(1);
+            CitizenMCAManager.saveData(citizen, data);
+        }
+
         // Trigger advancement
-        CriterionMCA.HEARTS.trigger(player, data != null ? data.getHearts() : 50, totalSatisfaction, "gift");
+        CriterionMCA.HEARTS.trigger(player, updatedHearts, totalSatisfaction, "gift");
         return true;
     }
 

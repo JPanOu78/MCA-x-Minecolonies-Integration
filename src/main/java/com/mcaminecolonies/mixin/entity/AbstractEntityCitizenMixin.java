@@ -101,11 +101,16 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
             this.mcaminecolonies$genetics.setGender(citizen.isFemale() ? Gender.FEMALE : Gender.MALE);
 
-            // 3. Sync initial skin/face index from seed data if not customized
+            // 3. Sync initial skin/face index and personality from seed data if not customized
             CitizenMCAData data = CitizenMCAManager.getData(citizen);
-            if (data != null && !data.isCustomized()) {
-                this.mcaminecolonies$genetics.setGene(Genetics.SKIN, (data.getSkinIndex() + 0.5F) / 5.0F);
-                this.mcaminecolonies$genetics.setGene(Genetics.FACE, (data.getFaceIndex() + 0.5F) / 22.0F);
+            if (data != null) {
+                if (!data.isCustomized()) {
+                    this.mcaminecolonies$genetics.setGene(Genetics.SKIN, (data.getSkinIndex() + 0.5F) / 5.0F);
+                    this.mcaminecolonies$genetics.setGene(Genetics.FACE, (data.getFaceIndex() + 0.5F) / 22.0F);
+                }
+                if (this.mcaminecolonies$mcaBrain.getPersonality() == net.conczin.mca.entity.ai.relationship.Personality.UNASSIGNED) {
+                    this.mcaminecolonies$mcaBrain.setPersonality(data.getMCAPersonality());
+                }
             }
 
             // 4. Set tracked age state (walking child citizens use CHILD, adults use ADULT)
@@ -341,14 +346,10 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
 
         if (tag.contains("Clothes", 8)) {
             String clothes = tag.getString("Clothes");
-            data.setCustomClothes(clothes);
             this.setClothes(clothes);
         }
         if (tag.contains("Hair", 8)) {
             String hair = tag.getString("Hair");
-            if (hair.endsWith(".png")) {
-                data.setCustomHair(hair);
-            }
             this.setHair(hair);
         }
         if (tag.contains("HairStyle", 8)) {
@@ -502,7 +503,6 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             }
         }
 
-        data.setCustomized(true);
         CitizenMCAManager.saveData(citizen, data);
     }
 
@@ -513,10 +513,27 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
     @Override
     public void syncFromEditor(CompoundTag tag) {
         this.readAdditionalSaveData(tag);
+        AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
+        CitizenMCAData data = CitizenMCAManager.getData(citizen);
+        if (data != null) {
+            if (tag.contains("Clothes", 8)) {
+                String clothes = tag.getString("Clothes");
+                data.setCustomClothes(clothes);
+                this.setClothes(clothes);
+            }
+            if (tag.contains("Hair", 8)) {
+                String hair = tag.getString("Hair");
+                if (hair.endsWith(".png")) {
+                    data.setCustomHair(hair);
+                }
+                this.setHair(hair);
+            }
+            data.setCustomized(true);
+            CitizenMCAManager.saveData(citizen, data);
+        }
         if (tag.contains("CustomName", 8)) {
             String nameStr = tag.getString("CustomName");
             if (!nameStr.isBlank()) {
-                AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
                 try {
                     Component comp = Component.Serializer.fromJson(nameStr, this.registryAccess());
                     if (comp != null) {

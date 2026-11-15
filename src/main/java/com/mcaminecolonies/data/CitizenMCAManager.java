@@ -16,65 +16,144 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages MCA data lifecycle, ticking, growth progression, and state transitions for citizens.
  */
 public class CitizenMCAManager {
 
+    /**
+     * Backup cache keyed by "colonyId:citizenId" so that if MineColonies despawns and respawns a fresh
+     * EntityCitizen instance (e.g. resurrection, recall, or unstuck), MCA appearance and Memories are preserved.
+     */
+    private static final Map<String, CompoundTag> COLONY_CITIZEN_BACKUP = new ConcurrentHashMap<>();
+    private static final Map<String, CompoundTag> COLONY_TRACKED_BACKUP = new ConcurrentHashMap<>();
+
+    private static String getColonyCitizenKey(AbstractEntityCitizen citizen) {
+        try {
+            int colonyId = citizen.getEntityData().get(AbstractEntityCitizen.DATA_COLONY_ID);
+            int citizenId = citizen.getEntityData().get(AbstractEntityCitizen.DATA_CITIZEN_ID);
+            if (colonyId == 0 && citizen.getCitizenData() != null && citizen.getCitizenData().getColony() != null) {
+                colonyId = citizen.getCitizenData().getColony().getID();
+                citizenId = citizen.getCitizenData().getId();
+            }
+            if (colonyId != 0 && citizenId != 0) {
+                return colonyId + ":" + citizenId;
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public static CitizenMCAData getData(AbstractEntityCitizen citizen) {
         if (citizen instanceof IMCAEntityCitizen duck) {
             CompoundTag tag = duck.mcaminecolonies$getMCAData();
             if (tag != null && !tag.isEmpty()) {
                 return CitizenMCAData.fromNbt(tag, citizen.getUUID(), citizen.isFemale(), citizen.isBaby());
             }
+            // Check backup cache if citizen entity was recreated by MineColonies
+            String key = getColonyCitizenKey(citizen);
+            if (key != null && COLONY_CITIZEN_BACKUP.containsKey(key)) {
+                CompoundTag backup = COLONY_CITIZEN_BACKUP.get(key).copy();
+                duck.mcaminecolonies$setMCAData(backup);
+                if (!citizen.level().isClientSide() && citizen instanceof VillagerLike vl && COLONY_TRACKED_BACKUP.containsKey(key)) {
+                    try {
+                        vl.getTypeDataManager().load(citizen, COLONY_TRACKED_BACKUP.get(key).copy());
+                    } catch (Exception ignored) {
+                    }
+                }
+                return CitizenMCAData.fromNbt(backup, citizen.getUUID(), citizen.isFemale(), citizen.isBaby());
+            }
         }
         // Fallback default
         return CitizenMCAData.createDefault(citizen.getUUID(), citizen.isFemale(), citizen.isBaby());
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public static void saveData(AbstractEntityCitizen citizen, CitizenMCAData data) {
+        CompoundTag nbt = data.toNbt();
         if (citizen instanceof IMCAEntityCitizen duck) {
-            duck.mcaminecolonies$setMCAData(data.toNbt());
+            duck.mcaminecolonies$setMCAData(nbt);
+        }
+        String key = getColonyCitizenKey(citizen);
+        if (key != null) {
+            COLONY_CITIZEN_BACKUP.put(key, nbt.copy());
+            if (!citizen.level().isClientSide() && citizen instanceof VillagerLike vl && vl.getTypeDataManager() != null) {
+                try {
+                    CompoundTag tracked = new CompoundTag();
+                    vl.getTypeDataManager().save(citizen, tracked);
+                    COLONY_TRACKED_BACKUP.put(key, tracked);
+                } catch (Exception ignored) {
+                }
+            }
         }
     }
 
     /**
-     * Ticks growth and age on server side.
+     * Ticks movement, growth, and age on server side.
      */
     public static void tickCitizen(AbstractEntityCitizen citizen) {
         if (citizen.level().isClientSide()) return;
 
-        // Run growth update every 20 ticks (1 second)
+        // 1. High-frequency Follow and Stay movement handling to prevent MineColonies AI tug-of-war
+        if (citizen instanceof VillagerLike<?> vl) {
+            MoveState moveState = vl.getVillagerBrain().getMoveState();
+            if (moveState == MoveState.STAY) {
+                citizen.getNavigation().stop();
+                if (citizen.getCitizenData() != null && !citizen.getCitizenData().isPaused()) {
+                    citizen.getCitizenData().setPaused(true);
+                }
+            } else if (moveState == MoveState.FOLLOW) {
+                if (citizen.getCitizenData() != null && !citizen.getCitizenData().isPaused()) {
+                    citizen.getCitizenData().setPaused(true);
+                }
+                if (citizen.tickCount % 5 == 0) {
+                    CitizenMCAData data = getData(citizen);
+                    ServerPlayer followPlayer = null;
+                    if (data.getFollowTarget() != null) {
+                        followPlayer = (ServerPlayer) citizen.level().getPlayerByUUID(data.getFollowTarget());
+                    }
+                    if (followPlayer == null) {
+                        List<ServerPlayer> nearby = citizen.level().getEntitiesOfClass(ServerPlayer.class, citizen.getBoundingBox().inflate(16.0));
+                        if (!nearby.isEmpty()) {
+                            followPlayer = nearby.get(0);
+                        }
+                    }
+                    if (followPlayer != null && followPlayer.isAlive()) {
+                        double distSq = citizen.distanceToSqr(followPlayer);
+                        if (distSq > 400.0) { // > 20 blocks: teleport
+                            citizen.teleportTo(followPlayer.getX(), followPlayer.getY(), followPlayer.getZ());
+                        } else if (distSq > 6.25) { // > 2.5 blocks: pathfind
+                            citizen.getNavigation().moveTo(followPlayer, 1.15);
+                        } else {
+                            citizen.getNavigation().stop();
+                            citizen.getLookControl().setLookAt(followPlayer);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Run growth & periodic updates every 20 ticks (1 second)
         if (citizen.tickCount % 20 != 0) return;
 
         CitizenMCAData data = getData(citizen);
 
-        // Active Follow and Stay movement handling
         if (citizen instanceof VillagerLike<?> vl) {
-            MoveState moveState = vl.getVillagerBrain().getMoveState();
-            if (moveState == MoveState.FOLLOW) {
-                ServerPlayer followPlayer = null;
-                if (data.getFollowTarget() != null) {
-                    followPlayer = (ServerPlayer) citizen.level().getPlayerByUUID(data.getFollowTarget());
+            // Restore persisted MoveState if entity reloaded while in FOLLOW or STAY
+            MoveState currentBrainMove = vl.getVillagerBrain().getMoveState();
+            String savedMove = data.getMoveState();
+            if ("FOLLOW".equals(savedMove) && currentBrainMove == MoveState.MOVE && data.getFollowTarget() != null) {
+                ServerPlayer target = (ServerPlayer) citizen.level().getPlayerByUUID(data.getFollowTarget());
+                if (target != null) {
+                    vl.getVillagerBrain().setMoveState(MoveState.FOLLOW, target);
                 }
-                if (followPlayer == null) {
-                    List<ServerPlayer> nearby = citizen.level().getEntitiesOfClass(ServerPlayer.class, citizen.getBoundingBox().inflate(16.0));
-                    if (!nearby.isEmpty()) {
-                        followPlayer = nearby.get(0);
-                    }
-                }
-                if (followPlayer != null && followPlayer.isAlive()) {
-                    double distSq = citizen.distanceToSqr(followPlayer);
-                    if (distSq > 400.0) { // > 20 blocks: teleport
-                        citizen.teleportTo(followPlayer.getX(), followPlayer.getY(), followPlayer.getZ());
-                    } else if (distSq > 9.0) { // > 3 blocks: pathfind
-                        citizen.getNavigation().moveTo(followPlayer, 1.15);
-                    }
-                }
-            } else if (moveState == MoveState.STAY) {
-                citizen.getNavigation().stop();
+            } else if ("STAY".equals(savedMove) && currentBrainMove == MoveState.MOVE) {
+                vl.getVillagerBrain().setMoveState(MoveState.STAY, null);
             }
 
             // Fatigue recovery: reduce interaction fatigue by 1 every 1200 ticks (60 seconds) per MCA standard
@@ -102,6 +181,16 @@ public class CitizenMCAManager {
         }
 
         boolean isChild = citizen.isBaby();
+        if (!isChild && data.getAge() < CitizenAgeState.ADULT.getMinAge()) {
+            // MineColonies grew the child into an adult -> sync MCA age and AgeState
+            data.setAge(CitizenAgeState.ADULT.getMinAge());
+            if (citizen instanceof VillagerLike<?> vl) {
+                vl.setTrackedValue(VillagerLike.AGE_STATE, net.conczin.mca.entity.ai.relationship.AgeState.ADULT);
+                vl.updateAttributes();
+            }
+            saveData(citizen, data);
+            return;
+        }
 
         if (isChild) {
             CitizenAgeState oldState = data.getAgeState(true);
@@ -111,12 +200,18 @@ public class CitizenMCAManager {
             // Check if grown into adult
             if (data.getAge() >= CitizenAgeState.ADULT.getMinAge()) {
                 citizen.setIsChild(false);
+                citizen.getEntityData().set(AbstractEntityCitizen.DATA_IS_CHILD, false);
+                if (citizen.getCitizenData() != null) {
+                    citizen.getCitizenData().setIsChild(false);
+                }
                 data.setAge(CitizenAgeState.ADULT.getMinAge());
                 saveData(citizen, data);
 
                 if (citizen instanceof VillagerLike<?> vl) {
+                    vl.setTrackedValue(VillagerLike.AGE_STATE, net.conczin.mca.entity.ai.relationship.AgeState.ADULT);
                     vl.updateAttributes();
                 }
+                citizen.refreshDimensions();
 
                 if (citizen.level() instanceof ServerLevel serverLevel) {
                     serverLevel.playSound(null, citizen.getX(), citizen.getY(), citizen.getZ(),
@@ -140,8 +235,10 @@ public class CitizenMCAManager {
                 saveData(citizen, data);
 
                 if (citizen instanceof VillagerLike<?> vl) {
+                    vl.setTrackedValue(VillagerLike.AGE_STATE, vl.getAgeState());
                     vl.updateAttributes();
                 }
+                citizen.refreshDimensions();
 
                 if (citizen.level() instanceof ServerLevel serverLevel) {
                     serverLevel.playSound(null, citizen.getX(), citizen.getY(), citizen.getZ(),
@@ -154,6 +251,9 @@ public class CitizenMCAManager {
                 // Periodic save to sync age ticks smoothly
                 saveData(citizen, data);
             }
+        } else if (citizen.tickCount % 200 == 0) {
+            // Periodic backup sync for adults
+            saveData(citizen, data);
         }
     }
 }

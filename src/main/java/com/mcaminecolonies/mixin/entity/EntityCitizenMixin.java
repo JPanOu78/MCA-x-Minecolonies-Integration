@@ -150,23 +150,16 @@ public abstract class EntityCitizenMixin {
 
                     if (tag.contains("Skin", 8)) {
                         String skin = tag.getString("Skin");
-                        data.setCustomSkin(skin);
                         vl.setSkin(skin);
                     }
                     if (tag.contains("Clothes", 8)) {
                         String clothes = tag.getString("Clothes");
-                        data.setCustomClothes(clothes);
                         vl.setClothes(clothes);
-                    } else if (vl.getClothes() != null && !vl.getClothes().isEmpty()) {
-                        data.setCustomClothes(vl.getClothes());
                     }
 
                     if (tag.contains("Hair", 8)) {
                         String hair = tag.getString("Hair");
-                        data.setCustomHair(hair);
                         vl.setHair(hair);
-                    } else if (vl.getHair() != null && !vl.getHair().isEmpty()) {
-                        data.setCustomHair(vl.getHair());
                     }
 
                     if (tag.contains("SkinDye", 99)) {
@@ -233,7 +226,6 @@ public abstract class EntityCitizenMixin {
                             citizen.setFemale(fem);
                         }
                     }
-                    data.setCustomized(true);
                     CitizenMCAManager.saveData(citizen, data);
                 } catch (Exception ignored) {
                 }

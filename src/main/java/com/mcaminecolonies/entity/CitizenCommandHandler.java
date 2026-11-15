@@ -60,15 +60,35 @@ public class CitizenCommandHandler extends EntityCommandHandler {
                 if (this.entity instanceof AbstractEntityCitizen citizen) {
                     CitizenMCAData mcaData = CitizenMCAManager.getData(citizen);
                     mcaData.setFollowTarget(player.getUUID());
+                    mcaData.setMoveState("FOLLOW");
                     CitizenMCAManager.saveData(citizen, mcaData);
+                    if (citizen.getCitizenData() != null) {
+                        citizen.getCitizenData().setPaused(true);
+                    }
+                    citizen.getNavigation().moveTo(player, 1.15);
                 }
                 player.sendSystemMessage(Component.translatable("mca.interaction.follow.success", this.entity.getDisplayName()));
             } else if (state == MoveState.STAY) {
                 if (this.entity instanceof AbstractEntityCitizen citizen) {
+                    CitizenMCAData mcaData = CitizenMCAManager.getData(citizen);
+                    mcaData.setMoveState("STAY");
+                    CitizenMCAManager.saveData(citizen, mcaData);
+                    if (citizen.getCitizenData() != null) {
+                        citizen.getCitizenData().setPaused(true);
+                    }
                     citizen.getNavigation().stop();
                 }
                 player.sendSystemMessage(Component.translatable("mca.interaction.stay.success", this.entity.getDisplayName()));
             } else {
+                if (this.entity instanceof AbstractEntityCitizen citizen) {
+                    CitizenMCAData mcaData = CitizenMCAManager.getData(citizen);
+                    mcaData.setFollowTarget(null);
+                    mcaData.setMoveState("MOVE");
+                    CitizenMCAManager.saveData(citizen, mcaData);
+                    if (citizen.getCitizenData() != null) {
+                        citizen.getCitizenData().setPaused(false);
+                    }
+                }
                 player.sendSystemMessage(Component.translatable("mca.interaction.move.success", this.entity.getDisplayName()));
             }
             return true;
@@ -77,6 +97,16 @@ public class CitizenCommandHandler extends EntityCommandHandler {
         // 1b. Home commands (gohome, sethome) based on MineColonies Resident Hut
         if (command.equals("gohome")) {
             if (this.entity instanceof AbstractEntityCitizen citizen) {
+                if (citizen instanceof VillagerLike<?> vl) {
+                    vl.getVillagerBrain().setMoveState(MoveState.MOVE, player);
+                }
+                CitizenMCAData mcaData = CitizenMCAManager.getData(citizen);
+                mcaData.setFollowTarget(null);
+                mcaData.setMoveState("MOVE");
+                CitizenMCAManager.saveData(citizen, mcaData);
+                if (citizen.getCitizenData() != null) {
+                    citizen.getCitizenData().setPaused(false);
+                }
                 net.minecraft.core.BlockPos homePos = null;
                 if (citizen.getCitizenData() != null) {
                     homePos = citizen.getCitizenData().getBedPos();
@@ -177,16 +207,25 @@ public class CitizenCommandHandler extends EntityCommandHandler {
         }
 
         VillagerBrain<?> brain = vl.getVillagerBrain();
+        boolean hasPlayerMemory = brain.getMemories().containsKey(player.getUUID());
         Memories memories = brain.getMemoriesForPlayer(player);
+        CitizenMCAData mcaData = (this.entity instanceof AbstractEntityCitizen citizen) ? CitizenMCAManager.getData(citizen) : null;
+
+        if (!hasPlayerMemory && memories != null) {
+            memories.setHearts(0);
+            memories.setInteractionFatigue(0);
+            if (mcaData != null && mcaData.getHearts() == 50 && this.entity instanceof AbstractEntityCitizen citizen) {
+                mcaData.setHearts(0);
+                CitizenMCAManager.saveData(citizen, mcaData);
+            }
+        }
+
         int currentHearts = memories.getHearts();
         int fatigue = memories.getInteractionFatigue();
 
-        CitizenMCAData mcaData = (this.entity instanceof AbstractEntityCitizen citizen) ? CitizenMCAManager.getData(citizen) : null;
         if (mcaData != null) {
             fatigue = Math.max(fatigue, mcaData.getFatigue());
-            currentHearts = mcaData.getHearts();
             memories.setInteractionFatigue(fatigue);
-            memories.setHearts(currentHearts);
         }
 
         // 1. Fatigue limit check (aligned with MCA Reborn dialogue fatigue)
@@ -232,7 +271,6 @@ public class CitizenCommandHandler extends EntityCommandHandler {
                 case "joke" -> 3;
                 default -> 2;
             };
-            memories.modHearts(heartGain);
             brain.rewardHearts(player, heartGain);
             this.entity.level().playSound(null, this.entity.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0F, 1.0F);
             if (this.entity.level() instanceof ServerLevel sl) {
