@@ -15,6 +15,7 @@
   "mixins": [
     "entity.AbstractEntityCitizenMixin",
     "entity.EntityCitizenMixin",
+    "colony.CitizenDataMixin",
     "colony.ReproductionManagerMixin",
     "network.InteractionDialogueInitMixin",
     "network.InteractionDialogueMessageMixin"

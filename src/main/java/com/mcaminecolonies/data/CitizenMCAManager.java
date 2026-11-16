@@ -55,6 +55,14 @@ public class CitizenMCAManager {
             if (tag != null && !tag.isEmpty()) {
                 return CitizenMCAData.fromNbt(tag, citizen.getUUID(), citizen.isFemale(), citizen.isBaby());
             }
+
+            // Check persistent colony citizen data if entity was recreated or reloaded
+            if (citizen.getCitizenData() instanceof IMCACitizenData cdDuck && cdDuck.mcaminecolonies$hasMCAData()) {
+                CompoundTag colTag = cdDuck.mcaminecolonies$getMCAData().copy();
+                duck.mcaminecolonies$setMCAData(colTag);
+                return CitizenMCAData.fromNbt(colTag, citizen.getUUID(), citizen.isFemale(), citizen.isBaby());
+            }
+
             // Check backup cache if citizen entity was recreated by MineColonies
             String key = getColonyCitizenKey(citizen);
             if (key != null && COLONY_CITIZEN_BACKUP.containsKey(key)) {
@@ -69,8 +77,24 @@ public class CitizenMCAManager {
                 return CitizenMCAData.fromNbt(backup, citizen.getUUID(), citizen.isFemale(), citizen.isBaby());
             }
         }
-        // Fallback default
-        return CitizenMCAData.createDefault(citizen.getUUID(), citizen.isFemale(), citizen.isBaby());
+
+        // Deterministic fallback default using colonyId and citizenId if known
+        int colonyId = 0;
+        int citizenId = 0;
+        try {
+            if (citizen.getCitizenData() != null) {
+                citizenId = citizen.getCitizenData().getId();
+                if (citizen.getCitizenData().getColony() != null) {
+                    colonyId = citizen.getCitizenData().getColony().getID();
+                }
+            }
+            if (citizenId == 0) {
+                citizenId = citizen.getEntityData().get(AbstractEntityCitizen.DATA_CITIZEN_ID);
+                colonyId = citizen.getEntityData().get(AbstractEntityCitizen.DATA_COLONY_ID);
+            }
+        } catch (Exception ignored) {
+        }
+        return CitizenMCAData.createDefault(citizen.getUUID(), colonyId, citizenId, citizen.isFemale(), citizen.isBaby());
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -78,6 +102,12 @@ public class CitizenMCAManager {
         CompoundTag nbt = data.toNbt();
         if (citizen instanceof IMCAEntityCitizen duck) {
             duck.mcaminecolonies$setMCAData(nbt);
+        }
+        if (citizen.getCitizenData() instanceof IMCACitizenData cdDuck) {
+            cdDuck.mcaminecolonies$setMCAData(nbt.copy());
+            if (citizen.getCitizenData().getColony() != null) {
+                citizen.getCitizenData().getColony().markDirty();
+            }
         }
         String key = getColonyCitizenKey(citizen);
         if (key != null) {

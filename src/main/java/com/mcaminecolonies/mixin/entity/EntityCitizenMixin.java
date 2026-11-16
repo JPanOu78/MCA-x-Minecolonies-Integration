@@ -33,6 +33,7 @@ public abstract class EntityCitizenMixin {
             CompoundTag mcaTag = duck.mcaminecolonies$getMCAData();
             if (mcaTag != null && !mcaTag.isEmpty()) {
                 tag.put("MCAData", mcaTag);
+                tag.put("MCAColoniesData", mcaTag);
             }
         }
         if ((Object) this instanceof VillagerLike vl && (Object) this instanceof Entity ent) {
@@ -92,8 +93,12 @@ public abstract class EntityCitizenMixin {
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
     private void mcaminecolonies$loadMCAData(CompoundTag tag, CallbackInfo ci) {
-        if ((Object) this instanceof IMCAEntityCitizen duck && tag.contains("MCAData")) {
-            duck.mcaminecolonies$setMCAData(tag.getCompound("MCAData"));
+        if ((Object) this instanceof IMCAEntityCitizen duck) {
+            if (tag.contains("MCAData", 10)) {
+                duck.mcaminecolonies$setMCAData(tag.getCompound("MCAData"));
+            } else if (tag.contains("MCAColoniesData", 10)) {
+                duck.mcaminecolonies$setMCAData(tag.getCompound("MCAColoniesData"));
+            }
         }
         if ((Object) this instanceof VillagerLike vl && (Object) this instanceof Entity ent) {
             CDataManager dataManager = vl.getTypeDataManager();
@@ -212,8 +217,9 @@ public abstract class EntityCitizenMixin {
                         }
                         float fGene = tag.contains("GeneFace", 99) ? tag.getFloat("GeneFace") : (tag.contains("Face", 99) ? tag.getFloat("Face") : vl.getGenetics().getGene(Genetics.FACE));
                         if (fGene > 0.0F) {
-                            data.setFaceIndex((int) Math.min(10.0F, Math.max(0.0F, fGene * 11.0F)));
-                            vl.getGenetics().setGene(Genetics.FACE, fGene);
+                            int fIdx = (int) Math.min(10.0F, Math.max(0.0F, fGene * 11.0F));
+                            data.setFaceIndex(fIdx);
+                            vl.getGenetics().setGene(Genetics.FACE, (fIdx + 0.5F) / 11.0F);
                         }
                         float sGene = tag.contains("GeneSkin", 99) ? tag.getFloat("GeneSkin") : (tag.contains("Skin", 99) ? tag.getFloat("Skin") : vl.getGenetics().getGene(Genetics.SKIN));
                         if (sGene > 0.0F) {

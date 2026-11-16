@@ -55,13 +55,25 @@ public class CitizenMCAData {
     }
 
     public static CitizenMCAData createDefault(UUID uuid, boolean isFemale, boolean isChild) {
+        return createDefault(uuid, 0, 0, isFemale, isChild);
+    }
+
+    public static CitizenMCAData createDefault(UUID uuid, int colonyId, int citizenId, boolean isFemale, boolean isChild) {
         CitizenMCAData data = new CitizenMCAData();
         data.setFemale(isFemale);
 
-        long lsb = uuid.getLeastSignificantBits();
-        long msb = uuid.getMostSignificantBits();
-        int seed1 = (int) Math.abs(lsb % 1000000007L);
-        int seed2 = (int) Math.abs(msb % 1000000009L);
+        int seed1;
+        int seed2;
+        if (citizenId > 0) {
+            long seed = ((long) colonyId * 31L + (long) citizenId) * 0x5DEECE66DL + 0xBL;
+            seed1 = (int) Math.abs((seed ^ (seed >>> 16)) % 1000000007L);
+            seed2 = (int) Math.abs((seed ^ (seed >>> 32)) % 1000000009L);
+        } else {
+            long lsb = uuid != null ? uuid.getLeastSignificantBits() : 0L;
+            long msb = uuid != null ? uuid.getMostSignificantBits() : 0L;
+            seed1 = (int) Math.abs(lsb % 1000000007L);
+            seed2 = (int) Math.abs(msb % 1000000009L);
+        }
 
         data.setSkinIndex(seed1 % 5);
         data.setFaceIndex(seed2 % 11);
@@ -191,7 +203,7 @@ public class CitizenMCAData {
     }
 
     public void setFaceIndex(int faceIndex) {
-        this.faceIndex = (faceIndex % 22 + 22) % 22;
+        this.faceIndex = (faceIndex % 11 + 11) % 11;
     }
 
     public float getMelanin() {
