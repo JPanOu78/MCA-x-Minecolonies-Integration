@@ -205,14 +205,66 @@ public abstract class EntityCitizenMixin {
                     }
 
                     if (tag.contains("EyeColor", 99)) {
-                        vl.setEyeDye(tag.getInt("EyeColor"));
+                        int ec = tag.getInt("EyeColor");
+                        data.setEyeColor(ec);
+                        vl.setEyeDye(ec);
                     } else if (tag.contains("EyeDye", 99)) {
-                        vl.setEyeDye(tag.getInt("EyeDye"));
+                        int ec = tag.getInt("EyeDye");
+                        data.setEyeColor(ec);
+                        vl.setEyeDye(ec);
                     }
                     if (tag.contains("EyeColorLeft", 99)) {
-                        vl.setEyeLeftDye(tag.getInt("EyeColorLeft"));
+                        int ecl = tag.getInt("EyeColorLeft");
+                        data.setEyeColorLeft(ecl);
+                        vl.setEyeLeftDye(ecl);
                     } else if (tag.contains("EyeLeftDye", 99)) {
-                        vl.setEyeLeftDye(tag.getInt("EyeLeftDye"));
+                        int ecl = tag.getInt("EyeLeftDye");
+                        data.setEyeColorLeft(ecl);
+                        vl.setEyeLeftDye(ecl);
+                    }
+
+                    if (tag.contains("ClothingLocked")) {
+                        boolean cl = tag.getBoolean("ClothingLocked");
+                        data.setClothingLocked(cl);
+                        vl.setClothingLocked(cl);
+                    }
+                    if (tag.contains("Breast", 99)) {
+                        float b = tag.getFloat("Breast");
+                        data.setBreast(b);
+                        if (vl.getGenetics() != null) vl.getGenetics().setGene(Genetics.BREAST, b);
+                    }
+                    if (tag.contains("Size", 99)) {
+                        float s = tag.getFloat("Size");
+                        data.setSize(s);
+                        if (vl.getGenetics() != null) vl.getGenetics().setGene(Genetics.SIZE, s);
+                    }
+                    if (tag.contains("Width", 99)) {
+                        float w = tag.getFloat("Width");
+                        data.setWidth(w);
+                        if (vl.getGenetics() != null) vl.getGenetics().setGene(Genetics.WIDTH, w);
+                    }
+                    if (tag.contains("EyeBrightness", 99)) {
+                        float eb = tag.getFloat("EyeBrightness");
+                        data.setEyeBrightness(eb);
+                        if (vl.getGenetics() != null) vl.getGenetics().setGene(Genetics.EYE_BRIGHTNESS, eb);
+                    }
+                    if (tag.contains("Mood", 99) && vl.getVillagerBrain() != null) {
+                        int md = tag.getInt("Mood");
+                        data.setMood(md);
+                        vl.getVillagerBrain().modifyMoodValue(md - vl.getVillagerBrain().getMoodValue());
+                    }
+                    if (tag.contains("ArmorWear")) {
+                        boolean aw = tag.getBoolean("ArmorWear");
+                        data.setArmorWear(aw);
+                        if (vl.getVillagerBrain() != null) vl.getVillagerBrain().setArmorWear(aw);
+                    }
+                    if (tag.contains("Traits", 9) && vl.getTraits() != null) {
+                        net.minecraft.nbt.ListTag list = tag.getList("Traits", 8);
+                        for (int i = 0; i < list.size(); i++) {
+                            String tId = list.getString(i);
+                            data.addTrait(tId);
+                            net.conczin.mca.entity.ai.Traits.get(tId).ifPresent(vl.getTraits()::addTrait);
+                        }
                     }
 
                     if (tag.contains("HairBase", 8)) vl.setLayeredHair(LayeredHair.Category.BASE, tag.getString("HairBase"));

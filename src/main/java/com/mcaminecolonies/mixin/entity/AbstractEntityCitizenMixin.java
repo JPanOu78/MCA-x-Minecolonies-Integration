@@ -20,6 +20,7 @@ import net.conczin.mca.entity.ai.relationship.Gender;
 import net.conczin.mca.entity.interaction.EntityCommandHandler;
 import net.conczin.mca.util.network.datasync.CDataManager;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -64,6 +65,7 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
                 VillagerLike.createTrackedData(AbstractEntityCitizen.class);
         Genetics.createTrackedData(builder);
         Traits.createTrackedData(builder);
+        VillagerBrain.createTrackedData(builder);
         MCAMINECOLONIES$DATA_MANAGER = builder.build();
     }
 
@@ -112,8 +114,25 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
                 if (data.getHemoglobin() > 0.0F) {
                     this.mcaminecolonies$genetics.setGene(Genetics.HEMOGLOBIN, data.getHemoglobin());
                 }
-                if (this.mcaminecolonies$mcaBrain.getPersonality() == net.conczin.mca.entity.ai.relationship.Personality.UNASSIGNED) {
-                    this.mcaminecolonies$mcaBrain.setPersonality(data.getMCAPersonality());
+                this.mcaminecolonies$genetics.setGene(Genetics.BREAST, data.getBreast());
+                this.mcaminecolonies$genetics.setGene(Genetics.SIZE, data.getSize());
+                this.mcaminecolonies$genetics.setGene(Genetics.WIDTH, data.getWidth());
+                this.mcaminecolonies$genetics.setGene(Genetics.EYE_BRIGHTNESS, data.getEyeBrightness());
+
+                if (this.mcaminecolonies$mcaBrain != null) {
+                    if (this.mcaminecolonies$mcaBrain.getPersonality() == net.conczin.mca.entity.ai.relationship.Personality.UNASSIGNED) {
+                        this.mcaminecolonies$mcaBrain.setPersonality(data.getMCAPersonality());
+                    }
+                    if (data.getMood() != 0) {
+                        this.mcaminecolonies$mcaBrain.modifyMoodValue(data.getMood() - this.mcaminecolonies$mcaBrain.getMoodValue());
+                    }
+                    this.mcaminecolonies$mcaBrain.setArmorWear(data.isArmorWear());
+                }
+
+                if (this.mcaminecolonies$traits != null && !data.getTraits().isEmpty()) {
+                    for (String traitId : data.getTraits()) {
+                        Traits.get(traitId).ifPresent(this.mcaminecolonies$traits::addTrait);
+                    }
                 }
             }
 
@@ -162,18 +181,32 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
                     } catch (Exception ignored) {
                     }
                 }
+                if (data.getHairBase() != null) this.setLayeredHair(LayeredHair.Category.BASE, data.getHairBase());
+                if (data.getHairBangs() != null) this.setLayeredHair(LayeredHair.Category.BANGS, data.getHairBangs());
+                if (data.getHairBack() != null) this.setLayeredHair(LayeredHair.Category.BACK, data.getHairBack());
+                if (data.getHairFront() != null) this.setLayeredHair(LayeredHair.Category.FRONT, data.getHairFront());
+                if (data.getHairExtra() != null) this.setLayeredHair(LayeredHair.Category.EXTRA, data.getHairExtra());
+
                 if (data.getHairColor() != 0 && data.getHairColor() != -16777216) {
                     this.setHairDye(data.getHairColor());
                 }
+
+                if (data.getEyeColor() != -1) {
+                    this.setEyeDye(data.getEyeColor());
+                } else if (this.getEyeDye() == 0) {
+                    this.clearEyeDye();
+                }
+
+                if (data.getEyeColorLeft() != -1) {
+                    this.setEyeLeftDye(data.getEyeColorLeft());
+                } else if (this.getEyeLeftDye() == 0) {
+                    this.clearEyeLeftDye();
+                }
+
+                this.setClothingLocked(data.isClothingLocked());
             }
 
             // 6. Natural dye defaults (-1 for eyes = derive from genetics, -16777216 for skin/hair = natural)
-            if (this.getEyeDye() == 0) {
-                this.clearEyeDye();
-            }
-            if (this.getEyeLeftDye() == 0) {
-                this.clearEyeLeftDye();
-            }
             if (this.getSkinDye() == 0) {
                 this.clearSkinDye();
             }
@@ -266,6 +299,24 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
         }
         CitizenMCAData data = CitizenMCAManager.getData((AbstractEntityCitizen) (Object) this);
         if (data != null) {
+            data.setClothingLocked(this.isClothingLocked());
+            if (this.getEyeDye() != 0) data.setEyeColor(this.getEyeDye());
+            if (this.getEyeLeftDye() != 0) data.setEyeColorLeft(this.getEyeLeftDye());
+            if (this.mcaminecolonies$mcaBrain != null) {
+                data.setMood(this.mcaminecolonies$mcaBrain.getMoodValue());
+                data.setArmorWear(this.mcaminecolonies$mcaBrain.getArmorWear());
+            }
+            if (this.mcaminecolonies$traits != null) {
+                for (Traits.Trait t : this.mcaminecolonies$traits.getTraits()) {
+                    data.addTrait(t.getId().toString());
+                }
+            }
+            if (this.getLayeredHair(LayeredHair.Category.BASE) != null) data.setHairBase(this.getLayeredHair(LayeredHair.Category.BASE));
+            if (this.getLayeredHair(LayeredHair.Category.BANGS) != null) data.setHairBangs(this.getLayeredHair(LayeredHair.Category.BANGS));
+            if (this.getLayeredHair(LayeredHair.Category.BACK) != null) data.setHairBack(this.getLayeredHair(LayeredHair.Category.BACK));
+            if (this.getLayeredHair(LayeredHair.Category.FRONT) != null) data.setHairFront(this.getLayeredHair(LayeredHair.Category.FRONT));
+            if (this.getLayeredHair(LayeredHair.Category.EXTRA) != null) data.setHairExtra(this.getLayeredHair(LayeredHair.Category.EXTRA));
+
             CompoundTag nbt = data.toNbt();
             tag.put("MCAData", nbt);
             tag.put("MCAColoniesData", nbt);
@@ -508,14 +559,66 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
         }
 
         if (tag.contains("EyeColor", 99)) {
-            this.setEyeDye(tag.getInt("EyeColor"));
+            int ec = tag.getInt("EyeColor");
+            data.setEyeColor(ec);
+            this.setEyeDye(ec);
         } else if (tag.contains("EyeDye", 99)) {
-            this.setEyeDye(tag.getInt("EyeDye"));
+            int ec = tag.getInt("EyeDye");
+            data.setEyeColor(ec);
+            this.setEyeDye(ec);
         }
         if (tag.contains("EyeColorLeft", 99)) {
-            this.setEyeLeftDye(tag.getInt("EyeColorLeft"));
+            int ecl = tag.getInt("EyeColorLeft");
+            data.setEyeColorLeft(ecl);
+            this.setEyeLeftDye(ecl);
         } else if (tag.contains("EyeLeftDye", 99)) {
-            this.setEyeLeftDye(tag.getInt("EyeLeftDye"));
+            int ecl = tag.getInt("EyeLeftDye");
+            data.setEyeColorLeft(ecl);
+            this.setEyeLeftDye(ecl);
+        }
+
+        if (tag.contains("ClothingLocked")) {
+            boolean cl = tag.getBoolean("ClothingLocked");
+            data.setClothingLocked(cl);
+            this.setClothingLocked(cl);
+        }
+        if (tag.contains("Breast", 99)) {
+            float b = tag.getFloat("Breast");
+            data.setBreast(b);
+            if (this.mcaminecolonies$genetics != null) this.mcaminecolonies$genetics.setGene(Genetics.BREAST, b);
+        }
+        if (tag.contains("Size", 99)) {
+            float s = tag.getFloat("Size");
+            data.setSize(s);
+            if (this.mcaminecolonies$genetics != null) this.mcaminecolonies$genetics.setGene(Genetics.SIZE, s);
+        }
+        if (tag.contains("Width", 99)) {
+            float w = tag.getFloat("Width");
+            data.setWidth(w);
+            if (this.mcaminecolonies$genetics != null) this.mcaminecolonies$genetics.setGene(Genetics.WIDTH, w);
+        }
+        if (tag.contains("EyeBrightness", 99)) {
+            float eb = tag.getFloat("EyeBrightness");
+            data.setEyeBrightness(eb);
+            if (this.mcaminecolonies$genetics != null) this.mcaminecolonies$genetics.setGene(Genetics.EYE_BRIGHTNESS, eb);
+        }
+        if (tag.contains("Mood", 99) && this.mcaminecolonies$mcaBrain != null) {
+            int md = tag.getInt("Mood");
+            data.setMood(md);
+            this.mcaminecolonies$mcaBrain.modifyMoodValue(md - this.mcaminecolonies$mcaBrain.getMoodValue());
+        }
+        if (tag.contains("ArmorWear")) {
+            boolean aw = tag.getBoolean("ArmorWear");
+            data.setArmorWear(aw);
+            if (this.mcaminecolonies$mcaBrain != null) this.mcaminecolonies$mcaBrain.setArmorWear(aw);
+        }
+        if (tag.contains("Traits", 9) && this.mcaminecolonies$traits != null) {
+            ListTag list = tag.getList("Traits", 8);
+            for (int i = 0; i < list.size(); i++) {
+                String tId = list.getString(i);
+                data.addTrait(tId);
+                Traits.get(tId).ifPresent(this.mcaminecolonies$traits::addTrait);
+            }
         }
 
         if (tag.contains("Gender", 99)) {

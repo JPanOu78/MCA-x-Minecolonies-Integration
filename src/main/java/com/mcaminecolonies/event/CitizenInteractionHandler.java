@@ -149,15 +149,26 @@ public class CitizenInteractionHandler {
             playEffect(citizen, SoundEvents.SHEEP_SHEAR, ParticleTypes.CRIT);
             player.displayClientMessage(Component.literal("Hairstyle: #" + (data.getHairIndex() + 1)), true);
         }
-        // 9. Needle & Thread -> Cycle Clothing
+        // 9. Needle & Thread -> Cycle Clothing / Shift-click to toggle Clothing Lock
         else if (itemId.contains("needle") || itemId.contains("sewing")) {
-            data.setClothingIndex(data.getClothingIndex() + 1);
-            data.setCustomClothes(null);
-            data.setCustomized(true);
-            modified = true;
+            if (player.isShiftKeyDown()) {
+                boolean locked = !data.isClothingLocked();
+                data.setClothingLocked(locked);
+                if (citizen instanceof net.conczin.mca.entity.VillagerLike<?> vl) {
+                    vl.setClothingLocked(locked);
+                }
+                modified = true;
+                playEffect(citizen, SoundEvents.UI_BUTTON_CLICK.value(), ParticleTypes.ENCHANT);
+                player.displayClientMessage(Component.literal(locked ? "§aClothing locked! (Will not change with jobs)" : "§eClothing unlocked! (Follows job uniforms)"), true);
+            } else {
+                data.setClothingIndex(data.getClothingIndex() + 1);
+                data.setCustomClothes(null);
+                data.setCustomized(true);
+                modified = true;
 
-            playEffect(citizen, SoundEvents.ARMOR_EQUIP_LEATHER.value(), ParticleTypes.HAPPY_VILLAGER);
-            player.displayClientMessage(Component.literal("Clothing Outfit: #" + (data.getClothingIndex() + 1)), true);
+                playEffect(citizen, SoundEvents.ARMOR_EQUIP_LEATHER.value(), ParticleTypes.HAPPY_VILLAGER);
+                player.displayClientMessage(Component.literal("Clothing Outfit: #" + (data.getClothingIndex() + 1)), true);
+            }
         }
         // 10. Potion of Femininity -> Set Female
         else if (itemId.contains("potion_of_femininity") || itemId.contains("feminine")) {

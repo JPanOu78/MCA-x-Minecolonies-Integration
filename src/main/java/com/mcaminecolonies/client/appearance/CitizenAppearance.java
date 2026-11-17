@@ -27,6 +27,13 @@ public class CitizenAppearance {
     private final String customClothes;
     private final String customHair;
     private final String hairStyleId;
+    private final boolean clothingLocked;
+    private final int eyeColor;
+    private final int eyeColorLeft;
+    private final float breast;
+    private final float size;
+    private final float width;
+    private final boolean armorWear;
 
     public CitizenAppearance(AbstractEntityCitizen citizen) {
         CitizenMCAData data = CitizenMCAManager.getData(citizen);
@@ -91,6 +98,13 @@ public class CitizenAppearance {
         this.customClothes = (data.isCustomized() && data.getCustomClothes() != null && !data.getCustomClothes().isEmpty() && !data.getCustomClothes().contains("/baby/")) ? data.getCustomClothes() : null;
         this.customHair = (data.isCustomized() && data.getCustomHair() != null && !data.getCustomHair().isEmpty()) ? data.getCustomHair() : null;
         this.hairStyleId = (data != null) ? data.resolveHairStyle(this.isFemale) : null;
+        this.clothingLocked = (data != null) && data.isClothingLocked();
+        this.eyeColor = (data != null) ? data.getEyeColor() : -1;
+        this.eyeColorLeft = (data != null) ? data.getEyeColorLeft() : -1;
+        this.breast = (data != null) ? data.getBreast() : 0.5F;
+        this.size = (data != null) ? data.getSize() : 0.5F;
+        this.width = (data != null) ? data.getWidth() : 0.5F;
+        this.armorWear = (data == null) || data.isArmorWear();
 
         int resolvedHairColor = CitizenMCAData.DEFAULT_HAIR_COLOR;
         if (vHairDye != 0 && vHairDye != -16777216) {
@@ -189,6 +203,42 @@ public class CitizenAppearance {
         return skinColor;
     }
 
+    public boolean isClothingLocked() {
+        return clothingLocked;
+    }
+
+    public int getEyeColor() {
+        return eyeColor;
+    }
+
+    public int getEyeColorLeft() {
+        return eyeColorLeft;
+    }
+
+    public float getBreast() {
+        return breast;
+    }
+
+    public float getSize() {
+        return size;
+    }
+
+    public float getWidth() {
+        return width;
+    }
+
+    public boolean isArmorWear() {
+        return armorWear;
+    }
+
+    public float getVerticalScale() {
+        return 0.75F + (this.size / 2.0F); // 0.75 to 1.25, default 1.0F
+    }
+
+    public float getHorizontalScale() {
+        return 0.75F + (this.width / 2.0F); // 0.75 to 1.25, default 1.0F
+    }
+
     public ResourceLocation getBaseSkinTexture() {
         if (customSkin != null) {
             return resolveMcaTexture(customSkin, "skins/skin/" + (isFemale ? "female" : "male") + "/" + (skinIndex % 5) + ".png");
@@ -238,6 +288,14 @@ public class CitizenAppearance {
             return ResourceLocation.fromNamespaceAndPath(
                 "mca",
                 "skins/clothing/normal/" + genderDir + "/" + folder + "/" + (clothingIndex % variantCount) + ".png"
+            );
+        }
+
+        // If clothing is locked by player, preserve civilian outfit rather than forcing worker uniform
+        if (this.clothingLocked) {
+            return ResourceLocation.fromNamespaceAndPath(
+                "mca",
+                "skins/clothing/normal/" + genderDir + "/none/" + (clothingIndex % 5) + ".png"
             );
         }
 

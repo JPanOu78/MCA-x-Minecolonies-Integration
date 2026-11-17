@@ -149,10 +149,12 @@ public class CitizenMCARenderer {
         float bodyRot = Mth.rotLerp(partialTicks, entity.yBodyRotO, entity.yBodyRot);
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - bodyRot));
 
-        // 2. Invert Y-axis, scale by MCA growth stage, and shift down to ground level
+        // 2. Invert Y-axis, scale by MCA growth stage & genetic proportions, and shift down to ground level
         poseStack.scale(-1.0F, -1.0F, 1.0F);
         float scale = 0.9375F * ageState.getBodyScale();
-        poseStack.scale(scale, scale, scale);
+        float hScale = appearance.getHorizontalScale();
+        float vScale = appearance.getVerticalScale();
+        poseStack.scale(scale * hScale, scale * vScale, scale * hScale);
         poseStack.translate(0.0F, -1.501F, 0.0F);
 
         // 3. Compute relative head yaw and pitch
@@ -293,7 +295,7 @@ public class CitizenMCARenderer {
         model.setAllVisible(true);
 
         // 5. Render Citizen Armor Layer (Helmet, Chestplate, Leggings, Boots)
-        if (armorLayer != null) {
+        if (armorLayer != null && appearance.isArmorWear()) {
             armorLayer.render(poseStack, buffer, packedLight, entity, limbSwing, limbSwingAmount, partialTicks, ageInTicks, netHeadYaw, headPitch);
         }
 

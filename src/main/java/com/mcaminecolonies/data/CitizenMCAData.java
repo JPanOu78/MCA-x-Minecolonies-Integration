@@ -2,7 +2,11 @@ package com.mcaminecolonies.data;
 
 import com.mcaminecolonies.client.appearance.CitizenAgeState;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -24,6 +28,21 @@ public class CitizenMCAData {
     private String customClothes;
     private String customHair;
     private String hairStyle;
+    private boolean clothingLocked;
+    private int eyeColor = -1;
+    private int eyeColorLeft = -1;
+    private float breast = 0.5F;
+    private float size = 0.5F;
+    private float width = 0.5F;
+    private float eyeBrightness = 0.5F;
+    private int mood;
+    private boolean armorWear = true;
+    private String hairBase;
+    private String hairBangs;
+    private String hairBack;
+    private String hairFront;
+    private String hairExtra;
+    private final Set<String> traits = new HashSet<>();
     private String personality;
     private int hearts;
     private int fatigue;
@@ -98,6 +117,19 @@ public class CitizenMCAData {
         } catch (Exception ignored) {
         }
 
+        // Baseline genetics
+        data.breast = 0.30F + ((seed1 % 40) / 100.0F); // 0.30 - 0.70
+        data.size = 0.40F + ((seed2 % 25) / 100.0F);  // 0.40 - 0.65
+        data.width = 0.40F + ((seed1 % 25) / 100.0F); // 0.40 - 0.65
+        data.eyeBrightness = 0.35F + ((seed2 % 35) / 100.0F);
+
+        // Rare trait rolls (deterministic from seed)
+        if (seed1 % 100 == 0) {
+            data.traits.add("mca:albinism");
+        } else if (seed2 % 50 == 0) {
+            data.traits.add("mca:heterochromia");
+        }
+
         // Generate natural baseline melanin & hemoglobin
         float naturalMelanin = 0.12F + ((seed1 % 100) / 100.0F) * 0.15F; // range 0.12F to 0.27F
         float naturalHemoglobin = 0.10F + ((seed2 % 100) / 100.0F) * 0.12F; // range 0.10F to 0.22F
@@ -133,6 +165,27 @@ public class CitizenMCAData {
         if (this.customClothes != null) tag.putString("CustomClothes", this.customClothes);
         if (this.customHair != null) tag.putString("CustomHair", this.customHair);
         if (this.hairStyle != null) tag.putString("HairStyle", this.hairStyle);
+        tag.putBoolean("ClothingLocked", this.clothingLocked);
+        tag.putInt("EyeColor", this.eyeColor);
+        tag.putInt("EyeColorLeft", this.eyeColorLeft);
+        tag.putFloat("Breast", this.breast);
+        tag.putFloat("Size", this.size);
+        tag.putFloat("Width", this.width);
+        tag.putFloat("EyeBrightness", this.eyeBrightness);
+        tag.putInt("Mood", this.mood);
+        tag.putBoolean("ArmorWear", this.armorWear);
+        if (this.hairBase != null) tag.putString("HairBase", this.hairBase);
+        if (this.hairBangs != null) tag.putString("HairBangs", this.hairBangs);
+        if (this.hairBack != null) tag.putString("HairBack", this.hairBack);
+        if (this.hairFront != null) tag.putString("HairFront", this.hairFront);
+        if (this.hairExtra != null) tag.putString("HairExtra", this.hairExtra);
+        if (!this.traits.isEmpty()) {
+            ListTag list = new ListTag();
+            for (String t : this.traits) {
+                list.add(StringTag.valueOf(t));
+            }
+            tag.put("Traits", list);
+        }
         tag.putString("Personality", this.personality);
         tag.putInt("Hearts", this.hearts);
         tag.putInt("Fatigue", this.fatigue);
@@ -157,6 +210,26 @@ public class CitizenMCAData {
         if (tag.contains("CustomSkin")) data.customSkin = tag.getString("CustomSkin");
         if (tag.contains("SkinDye")) data.skinDye = tag.getInt("SkinDye");
         if (tag.contains("HairStyle")) data.hairStyle = tag.getString("HairStyle");
+        if (tag.contains("ClothingLocked")) data.clothingLocked = tag.getBoolean("ClothingLocked");
+        if (tag.contains("EyeColor", 99)) data.eyeColor = tag.getInt("EyeColor");
+        if (tag.contains("EyeColorLeft", 99)) data.eyeColorLeft = tag.getInt("EyeColorLeft");
+        if (tag.contains("Breast", 99)) data.breast = tag.getFloat("Breast");
+        if (tag.contains("Size", 99)) data.size = tag.getFloat("Size");
+        if (tag.contains("Width", 99)) data.width = tag.getFloat("Width");
+        if (tag.contains("EyeBrightness", 99)) data.eyeBrightness = tag.getFloat("EyeBrightness");
+        if (tag.contains("Mood", 99)) data.mood = tag.getInt("Mood");
+        if (tag.contains("ArmorWear")) data.armorWear = tag.getBoolean("ArmorWear");
+        if (tag.contains("HairBase")) data.hairBase = tag.getString("HairBase");
+        if (tag.contains("HairBangs")) data.hairBangs = tag.getString("HairBangs");
+        if (tag.contains("HairBack")) data.hairBack = tag.getString("HairBack");
+        if (tag.contains("HairFront")) data.hairFront = tag.getString("HairFront");
+        if (tag.contains("HairExtra")) data.hairExtra = tag.getString("HairExtra");
+        if (tag.contains("Traits", 9)) {
+            ListTag list = tag.getList("Traits", 8);
+            for (int i = 0; i < list.size(); i++) {
+                data.traits.add(list.getString(i));
+            }
+        }
         if (tag.contains("Melanin")) data.melanin = tag.getFloat("Melanin");
         if (tag.contains("Hemoglobin")) data.hemoglobin = tag.getFloat("Hemoglobin");
 
@@ -396,6 +469,136 @@ public class CitizenMCAData {
 
     public CitizenAgeState getAgeState(boolean isMinecoloniesChild) {
         return CitizenAgeState.fromAge(this.age, isMinecoloniesChild);
+    }
+
+    public boolean isClothingLocked() {
+        return clothingLocked;
+    }
+
+    public void setClothingLocked(boolean clothingLocked) {
+        this.clothingLocked = clothingLocked;
+    }
+
+    public int getEyeColor() {
+        return eyeColor;
+    }
+
+    public void setEyeColor(int eyeColor) {
+        this.eyeColor = eyeColor;
+    }
+
+    public int getEyeColorLeft() {
+        return eyeColorLeft;
+    }
+
+    public void setEyeColorLeft(int eyeColorLeft) {
+        this.eyeColorLeft = eyeColorLeft;
+    }
+
+    public float getBreast() {
+        return breast;
+    }
+
+    public void setBreast(float breast) {
+        this.breast = Math.max(0.0F, Math.min(1.0F, breast));
+    }
+
+    public float getSize() {
+        return size;
+    }
+
+    public void setSize(float size) {
+        this.size = Math.max(0.0F, Math.min(1.0F, size));
+    }
+
+    public float getWidth() {
+        return width;
+    }
+
+    public void setWidth(float width) {
+        this.width = Math.max(0.0F, Math.min(1.0F, width));
+    }
+
+    public float getEyeBrightness() {
+        return eyeBrightness;
+    }
+
+    public void setEyeBrightness(float eyeBrightness) {
+        this.eyeBrightness = Math.max(0.0F, Math.min(1.0F, eyeBrightness));
+    }
+
+    public int getMood() {
+        return mood;
+    }
+
+    public void setMood(int mood) {
+        this.mood = Math.max(-100, Math.min(100, mood));
+    }
+
+    public boolean isArmorWear() {
+        return armorWear;
+    }
+
+    public void setArmorWear(boolean armorWear) {
+        this.armorWear = armorWear;
+    }
+
+    public String getHairBase() {
+        return hairBase;
+    }
+
+    public void setHairBase(String hairBase) {
+        this.hairBase = hairBase;
+    }
+
+    public String getHairBangs() {
+        return hairBangs;
+    }
+
+    public void setHairBangs(String hairBangs) {
+        this.hairBangs = hairBangs;
+    }
+
+    public String getHairBack() {
+        return hairBack;
+    }
+
+    public void setHairBack(String hairBack) {
+        this.hairBack = hairBack;
+    }
+
+    public String getHairFront() {
+        return hairFront;
+    }
+
+    public void setHairFront(String hairFront) {
+        this.hairFront = hairFront;
+    }
+
+    public String getHairExtra() {
+        return hairExtra;
+    }
+
+    public void setHairExtra(String hairExtra) {
+        this.hairExtra = hairExtra;
+    }
+
+    public Set<String> getTraits() {
+        return traits;
+    }
+
+    public void addTrait(String trait) {
+        if (trait != null && !trait.isBlank()) {
+            this.traits.add(trait);
+        }
+    }
+
+    public void removeTrait(String trait) {
+        this.traits.remove(trait);
+    }
+
+    public boolean hasTrait(String trait) {
+        return this.traits.contains(trait);
     }
 }
 

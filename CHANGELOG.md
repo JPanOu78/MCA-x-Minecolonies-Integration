@@ -1,6 +1,16 @@
 # Changelog - MCA x Minecolonies
 
-## [1.0.4] - Citizen Arm Spasm & Appearance Persistence Fix
+## [1.0.4] - Full MCA Parity, Spasm Fix & Appearance Persistence
+
+### Added
+- **Full MCA Reborn Field & Genetic Parity:**
+  - Integrated complete genetic and visual field parity with original MCA Reborn into `CitizenMCAData`, `CitizenAppearance`, and entity mixins.
+  - **Height & Body Proportions:** Added `size`, `width`, and `breast` genetic scaling (`Genetics.SIZE`, `Genetics.WIDTH`, `Genetics.BREAST`), dynamically scaling citizen models in `CitizenMCARenderer` with safe limits.
+  - **Heterochromia & Eye Customization:** Added dual-eye coloring (`eyeColor`, `eyeColorLeft`) and `eyeBrightness` genetics (`Genetics.EYE_BRIGHTNESS`), enabling distinct left/right eye colors and dye persistence.
+  - **Layered Hairstyle Elements:** Added individual layer support for `hairBase`, `hairBangs`, `hairBack`, `hairFront`, and `hairExtra`.
+  - **MCA Traits System:** Synchronized citizen trait sets (`traits`) between entity data, NBT storage, and MineColonies colony files (`colony_X.dat`).
+  - **Mood & Armor Visibility:** Added `mood` and `armorWear` fields, enabling MCA armor toggle and emotional state synchronization.
+  - **Clothing Lock Feature:** Shift-Right-Clicking a citizen with a Needle & Thread (`mca:needle_and_thread`) toggles casual clothing lock (`clothingLocked`), preventing MineColonies from forcing job uniforms over custom outfits.
 
 ### Fixed
 - **Hair Color & Hairstyle Mutating on World Reload:**
