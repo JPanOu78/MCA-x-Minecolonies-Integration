@@ -24,9 +24,11 @@
 ### Fixed
 - **Hair Color & Hairstyle Mutating on World Reload:**
   - Resolved an issue where citizen hairstyles and hair colors randomized every time the player exited and re-entered the world.
+  - Fixed an overwrite in `EntityCitizenMixin.addAdditionalSaveData` where `vl.getHairDye()` was saving 0 (for undyed natural hair) over persistent `CitizenMCAData` hair colors.
+  - Overrode `validateClothes()`, `randomizeHair()`, and `initializeSkin()` on `AbstractEntityCitizenMixin` to prevent MCA's internal validators from forcibly re-randomizing existing citizen hairstyles upon world load.
+  - Fixed `CitizenAppearance` so that `data.getHairColor()` is strictly prioritized as the primary source of truth, completely eliminating fallbacks to volatile unseeded `EUMELANIN` and `PHEOMELANIN` genetics.
   - Added full `HairStyle` persistence and serialization to `CitizenMCAData`, synchronizing MCA's layered hair styles directly into MineColonies colony data (`colony_X.dat`) and entity data packets.
   - Implemented deterministic fallback hairstyle resolution (`resolveHairStyle`) mapped from persistent seeds so legacy citizens without explicit hairstyles retain consistent styles across game sessions.
-  - Fixed hair color resolution in `CitizenAppearance` so stored natural and dyed hair colors are never bypassed in favor of newly randomized genetics.
   - Enhanced Comb & Shears interaction to cycle through modern MCA layered hairstyles in addition to classic hair variants.
 - **Citizen Arm & Torso Spasming / Jittering:**
   - Resolved an issue where non-guard citizens (such as Builders, Crafters, or citizens waiting at their hut blocks with active work requests) suffered from violent, continuous arm and torso twitches/spasms.

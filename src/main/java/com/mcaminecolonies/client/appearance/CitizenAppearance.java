@@ -107,19 +107,10 @@ public class CitizenAppearance {
         this.armorWear = (data == null) || data.isArmorWear();
 
         int resolvedHairColor = CitizenMCAData.DEFAULT_HAIR_COLOR;
-        if (vHairDye != 0 && vHairDye != -16777216) {
-            resolvedHairColor = (vHairDye & 0xFF000000) == 0 ? (0xFF000000 | vHairDye) : vHairDye;
-        } else if (data != null && data.getHairColor() != 0 && data.getHairColor() != -16777216) {
+        if (data != null && data.getHairColor() != 0 && data.getHairColor() != -16777216) {
             resolvedHairColor = (data.getHairColor() & 0xFF000000) == 0 ? (0xFF000000 | data.getHairColor()) : data.getHairColor();
-        } else if (citizen instanceof VillagerLike<?> vl && vl.getGenetics() != null) {
-            try {
-                float eumelanin = vl.getGenetics().getGene(Genetics.EUMELANIN) * albinismMultiplier;
-                float pheomelanin = vl.getGenetics().getGene(Genetics.PHEOMELANIN) * albinismMultiplier;
-                int calc = ColorPalette.HAIR.getColor(eumelanin, pheomelanin, 0.0F);
-                resolvedHairColor = (calc & 0xFF000000) == 0 ? (0xFF000000 | calc) : calc;
-            } catch (Exception ignored) {
-                resolvedHairColor = CitizenMCAData.DEFAULT_HAIR_COLOR;
-            }
+        } else if (vHairDye != 0 && vHairDye != -16777216) {
+            resolvedHairColor = (vHairDye & 0xFF000000) == 0 ? (0xFF000000 | vHairDye) : vHairDye;
         }
         this.hairColor = resolvedHairColor;
 

@@ -76,18 +76,23 @@ public abstract class EntityCitizenMixin {
             if (vl.getHair() != null && !vl.getHair().isEmpty()) {
                 tag.putString("Hair", vl.getHair());
             }
+            AbstractEntityCitizen cit = (ent instanceof AbstractEntityCitizen c) ? c : null;
+            CitizenMCAData cData = (cit != null) ? CitizenMCAManager.getData(cit) : null;
             String hStyle = vl.getHairStyleId();
-            if ((hStyle == null || hStyle.isEmpty()) && ent instanceof AbstractEntityCitizen cit) {
-                CitizenMCAData cData = CitizenMCAManager.getData(cit);
-                if (cData != null) hStyle = cData.getHairStyle();
+            if ((hStyle == null || hStyle.isEmpty()) && cData != null) {
+                hStyle = cData.getHairStyle();
             }
             if (hStyle != null && !hStyle.isEmpty()) {
                 tag.putString("HairStyle", hStyle);
             }
             tag.putInt("SkinColor", vl.getSkinDye());
             tag.putInt("SkinDye", vl.getSkinDye());
-            tag.putInt("HairColor", vl.getHairDye());
-            tag.putInt("HairDye", vl.getHairDye());
+
+            int hColor = (cData != null && cData.getHairColor() != 0 && cData.getHairColor() != -16777216)
+                    ? cData.getHairColor()
+                    : (vl.getHairDye() != 0 && vl.getHairDye() != -16777216 ? vl.getHairDye() : CitizenMCAData.DEFAULT_HAIR_COLOR);
+            tag.putInt("HairColor", hColor);
+            tag.putInt("HairDye", hColor);
             tag.putInt("EyeColor", vl.getEyeDye());
             tag.putInt("EyeDye", vl.getEyeDye());
             tag.putInt("EyeColorLeft", vl.getEyeLeftDye());
@@ -194,14 +199,18 @@ public abstract class EntityCitizenMixin {
                         vl.setSkinDye(sc);
                     }
 
-                    if (tag.contains("HairDye", 99)) {
-                        int hc = tag.getInt("HairDye");
-                        data.setHairColor(hc);
-                        vl.setHairDye(hc);
-                    } else if (tag.contains("HairColor", 99)) {
+                    if (tag.contains("HairColor", 99)) {
                         int hc = tag.getInt("HairColor");
-                        data.setHairColor(hc);
-                        vl.setHairDye(hc);
+                        if (hc != 0 && hc != -16777216) {
+                            data.setHairColor(hc);
+                            vl.setHairDye(hc);
+                        }
+                    } else if (tag.contains("HairDye", 99)) {
+                        int hc = tag.getInt("HairDye");
+                        if (hc != 0 && hc != -16777216) {
+                            data.setHairColor(hc);
+                            vl.setHairDye(hc);
+                        }
                     }
 
                     if (tag.contains("EyeColor", 99)) {

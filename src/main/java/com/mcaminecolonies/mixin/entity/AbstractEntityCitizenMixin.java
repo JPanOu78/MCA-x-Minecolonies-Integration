@@ -293,6 +293,47 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
     }
 
     @Override
+    public void validateClothes() {
+        // Prevent MCA from randomly resetting hair style or clothes on reload
+    }
+
+    @Override
+    public void randomizeHair() {
+        AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
+        CitizenMCAData data = CitizenMCAManager.getData(citizen);
+        if (data != null && data.getHairStyle() != null && !data.getHairStyle().isEmpty()) {
+            this.setHairStyleId(data.getHairStyle());
+            return;
+        }
+        try {
+            net.conczin.mca.resources.HairStyleList hsl = net.conczin.mca.resources.HairStyleList.getInstance();
+            if (hsl != null) {
+                var style = hsl.pick(this.mcaminecolonies$genetics != null ? this.mcaminecolonies$genetics.getGender() : Gender.MALE);
+                if (style != null) {
+                    this.setHairStyle(style);
+                    if (data != null) {
+                        data.setHairStyle(style.getIdentifier());
+                        CitizenMCAManager.saveData(citizen, data);
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    @Override
+    public void initializeSkin(boolean force) {
+        AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
+        CitizenMCAData data = CitizenMCAManager.getData(citizen);
+        if (data != null && (data.isCustomized() || (data.getHairStyle() != null && !data.getHairStyle().isEmpty()))) {
+            return;
+        }
+        this.randomizeSkin();
+        this.randomizeClothes();
+        this.randomizeHair();
+    }
+
+    @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         mcaminecolonies$initMCA();
@@ -543,12 +584,16 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
 
         if (tag.contains("HairColor", 99)) {
             int hc = tag.getInt("HairColor");
-            data.setHairColor(hc);
-            this.setHairDye(hc);
+            if (hc != 0 && hc != -16777216) {
+                data.setHairColor(hc);
+                this.setHairDye(hc);
+            }
         } else if (tag.contains("HairDye", 99)) {
             int hc = tag.getInt("HairDye");
-            data.setHairColor(hc);
-            this.setHairDye(hc);
+            if (hc != 0 && hc != -16777216) {
+                data.setHairColor(hc);
+                this.setHairDye(hc);
+            }
         } else if (tag.contains("HairColorRed", 99) && tag.contains("HairColorGreen", 99) && tag.contains("HairColorBlue", 99)) {
             float r = tag.getFloat("HairColorRed");
             float g = tag.getFloat("HairColorGreen");
