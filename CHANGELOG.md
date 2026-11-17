@@ -1,5 +1,15 @@
 # Changelog - MCA x Minecolonies
 
+## [1.0.4] - Citizen Arm Spasm & Work Animation Fix
+
+### Fixed
+- **Citizen Arm & Torso Spasming / Jittering:**
+  - Resolved an issue where non-guard citizens (such as Builders, Crafters, or citizens waiting at their hut blocks with active work requests) suffered from violent, continuous arm and torso twitches/spasms.
+  - Removed artificial sine wave oscillation previously injected into `model.attackTime` whenever MineColonies synced `"working"` render metadata.
+  - Restored authentic Minecraft swing animations driven directly by entity actions (`entity.getAttackAnim(partialTicks)`), allowing smooth swings when workers physically interact or swing tools.
+- **Client Rendering Performance:**
+  - Removed redundant per-frame guard detection string checks and held item inspections during the client render pass.
+
 ## [1.0.3] - Citizen Face & Appearance Persistence Fix
 
 ### Fixed

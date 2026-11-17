@@ -164,9 +164,8 @@ public class CitizenMCARenderer {
         float limbSwingAmount = entity.walkAnimation.speed(partialTicks);
         float ageInTicks = entity.tickCount + partialTicks;
 
-        // Resolve Job and Guard status safely on client
+        // Resolve Job safely on client
         String jobName = "none";
-        boolean isGuard = false;
         try {
             String synchedJob = entity.getEntityData().get(AbstractEntityCitizen.DATA_JOB);
             if (synchedJob != null && !synchedJob.isEmpty()) {
@@ -190,41 +189,8 @@ public class CitizenMCARenderer {
         } catch (Exception ignored) {
         }
 
-        String lowerJob = jobName.toLowerCase();
-        isGuard = lowerJob.contains("guard") || lowerJob.contains("knight") || lowerJob.contains("archer")
-                || lowerJob.contains("ranger") || lowerJob.contains("druid") || lowerJob.contains("mage")
-                || lowerJob.contains("combat") || lowerJob.contains("patrol") || lowerJob.contains("soldier")
-                || lowerJob.contains("mercenary") || lowerJob.contains("gunner") || lowerJob.contains("gun")
-                || lowerJob.contains("marksman") || lowerJob.contains("artificer");
-
-        // Fallback guard detection via held weapons / shields
-        if (!isGuard) {
-            net.minecraft.world.item.ItemStack mainItem = entity.getMainHandItem();
-            net.minecraft.world.item.ItemStack offItem = entity.getOffhandItem();
-            String mainItemName = mainItem.getItem().toString().toLowerCase();
-            String offItemName = offItem.getItem().toString().toLowerCase();
-            if (mainItem.getItem() instanceof net.minecraft.world.item.SwordItem
-                    || mainItem.getItem() instanceof net.minecraft.world.item.BowItem
-                    || mainItem.getItem() instanceof net.minecraft.world.item.CrossbowItem
-                    || mainItem.getItem() instanceof net.minecraft.world.item.ShieldItem
-                    || offItem.getItem() instanceof net.minecraft.world.item.ShieldItem
-                    || mainItemName.contains("wand") || mainItemName.contains("staff") || mainItemName.contains("spell")
-                    || offItemName.contains("spell") || offItemName.contains("shield")
-                    || mainItemName.contains("gun") || mainItemName.contains("musket") || mainItemName.contains("pistol")
-                    || mainItemName.contains("rifle") || mainItemName.contains("blunderbuss") || mainItemName.contains("arquebus")) {
-                isGuard = true;
-            }
-        }
-
-        // Arm swing & poses: guards ONLY swing when attacking in combat. Non-guard workers swing while working.
+        // Arm swing & poses: Use authentic swing animation driven by Minecraft/MineColonies AI
         float swingProgress = entity.getAttackAnim(partialTicks);
-        if (!isGuard && swingProgress == 0.0F && entity.getRenderMetadata() != null && entity.getRenderMetadata().contains("working")) {
-            float workSwing = (float) Math.sin((entity.tickCount + partialTicks) * 0.4F);
-            if (workSwing > 0.0F) {
-                swingProgress = workSwing;
-            }
-        }
-
         model.attackTime = swingProgress;
         model.crouching = entity.isCrouching();
         model.riding = entity.isPassenger();
