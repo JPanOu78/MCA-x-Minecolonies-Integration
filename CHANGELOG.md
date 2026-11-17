@@ -15,6 +15,11 @@
     - Newly born colony children now inherit skills from their parents based on parental proficiency (inheriting up to +5 bonus levels proportional to parents' MineColonies skill levels).
     - MCA traits are passed down to children with high probability.
     - Added trait synergies: `Athletic` (+2 Athletics, +1 Agility, +1 Stamina, +10% move speed), `Tough` (+2 Strength, +1 Stamina), and `Weak` (-1 Strength, -8% move speed).
+  - **Automatic MCA Baby Birth & Colony Adoption (`ColonyAdoptionHelper` & `BabyItemMixin`):**
+    - When an MCA infant/child is birthed (`BabyItem.birthChild`) or spawns within a colony's territory, it is automatically converted and enrolled into MineColonies as a full colony citizen (`AbstractEntityCitizen`).
+    - Copies all facial, skin tone, hair layers, eye colors, body dimensions, and MCA traits into the new citizen.
+    - Automatically links the child to both parents in MineColonies (`cData.setParents`, spouse `addChildren`) and updates MCA's `FamilyTree`.
+    - Added Shift-Right Click adoption allowing colony leaders to manually adopt any existing MCA child villager into their colony.
 
 ### Fixed
 - **Hair Color & Hairstyle Mutating on World Reload:**

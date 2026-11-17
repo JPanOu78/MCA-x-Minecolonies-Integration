@@ -5,7 +5,9 @@ import com.mcaminecolonies.client.gui.CitizenClientScreens;
 import com.mcaminecolonies.data.CitizenMCAData;
 import com.mcaminecolonies.data.CitizenMCAManager;
 import com.mcaminecolonies.entity.CitizenRelationshipHelper;
+import com.mcaminecolonies.entity.ColonyAdoptionHelper;
 import com.minecolonies.api.entity.citizen.AbstractEntityCitizen;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.conczin.mca.entity.ai.relationship.RelationshipState;
 import net.conczin.mca.server.world.data.PlayerSaveData;
 import net.minecraft.core.particles.ParticleTypes;
@@ -25,17 +27,55 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 /**
  * Handles customizing citizens using MCA items (Villager Editor, Dressing Mirror, Family Tree,
- * Engagement/Wedding Rings, Divorce Papers, Dyes, Comb, Needle, Potions, and Growth Food).
+ * Engagement/Wedding Rings, Divorce Papers, Dyes, Comb, Needle, Potions, and Growth Food),
+ * as well as colony adoption of MCA infants/children.
  */
 @EventBusSubscriber(modid = "mcaminecolonies")
 public class CitizenInteractionHandler {
 
     @SubscribeEvent
+    public static void onEntityJoin(EntityJoinLevelEvent event) {
+        if (event.loadedFromDisk() || event.getLevel().isClientSide()) return;
+        if (!(event.getLevel() instanceof ServerLevel serverLevel)) return;
+        if (event.getEntity() instanceof VillagerEntityMCA mcaVillager && !(event.getEntity() instanceof AbstractEntityCitizen)) {
+            if (mcaVillager.isRemoved()) return;
+            if (mcaVillager.isBaby() || mcaVillager.getAgeState() != net.conczin.mca.entity.ai.relationship.AgeState.ADULT) {
+                var colony = com.minecolonies.api.IMinecoloniesAPI.getInstance().getColonyManager().getIColony(serverLevel, mcaVillager.blockPosition());
+                if (colony != null) {
+                    ColonyAdoptionHelper.convertMCAChildToCitizen(mcaVillager, colony, serverLevel, null);
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
     public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
+        // Allow adopting existing MCA child villagers into the colony via Shift-Right Click
+        if (event.getTarget() instanceof VillagerEntityMCA mcaVillager && !(event.getTarget() instanceof AbstractEntityCitizen)) {
+            if (mcaVillager.isBaby() || mcaVillager.getAgeState() != net.conczin.mca.entity.ai.relationship.AgeState.ADULT) {
+                if (event.getEntity() instanceof ServerPlayer sp && sp.isShiftKeyDown()) {
+                    var colony = com.minecolonies.api.IMinecoloniesAPI.getInstance().getColonyManager().getIColony(sp.serverLevel(), mcaVillager.blockPosition());
+                    if (colony == null) {
+                        colony = com.minecolonies.api.IMinecoloniesAPI.getInstance().getColonyManager().getIColonyByOwner(sp.serverLevel(), sp);
+                    }
+                    if (colony != null && (sp.getUUID().equals(colony.getPermissions().getOwner()) || colony.getPermissions().hasPermission(sp, com.minecolonies.api.colony.permissions.Action.MANAGE_HUTS))) {
+                        boolean ok = ColonyAdoptionHelper.convertMCAChildToCitizen(mcaVillager, colony, sp.serverLevel(), sp);
+                        if (ok) {
+                            event.setCanceled(true);
+                            event.setCancellationResult(InteractionResult.SUCCESS);
+                            return;
+                        }
+                    }
+                }
+            }
+            return;
+        }
+
         if (!(event.getTarget() instanceof AbstractEntityCitizen citizen)) return;
 
         // Do not intercept interactions on visitors (they must strictly show the MineColonies recruit interface)

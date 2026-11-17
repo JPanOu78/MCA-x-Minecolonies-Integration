@@ -17,6 +17,7 @@
     "entity.EntityCitizenMixin",
     "colony.CitizenDataMixin",
     "colony.ReproductionManagerMixin",
+    "item.BabyItemMixin",
     "network.InteractionDialogueInitMixin",
     "network.InteractionDialogueMessageMixin"
   ],
