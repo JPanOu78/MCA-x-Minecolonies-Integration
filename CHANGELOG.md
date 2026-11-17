@@ -11,6 +11,10 @@
   - **MCA Traits System:** Synchronized citizen trait sets (`traits`) between entity data, NBT storage, and MineColonies colony files (`colony_X.dat`).
   - **Mood & Armor Visibility:** Added `mood` and `armorWear` fields, enabling MCA armor toggle and emotional state synchronization.
   - **Clothing Lock Feature:** Shift-Right-Clicking a citizen with a Needle & Thread (`mca:needle_and_thread`) toggles casual clothing lock (`clothingLocked`), preventing MineColonies from forcing job uniforms over custom outfits.
+  - **Parent Stat & Trait Inheritance on Colony Birth:**
+    - Newly born colony children now inherit skills from their parents based on parental proficiency (inheriting up to +5 bonus levels proportional to parents' MineColonies skill levels).
+    - MCA traits are passed down to children with high probability.
+    - Added trait synergies: `Athletic` (+2 Athletics, +1 Agility, +1 Stamina, +10% move speed), `Tough` (+2 Strength, +1 Stamina), and `Weak` (-1 Strength, -8% move speed).
 
 ### Fixed
 - **Hair Color & Hairstyle Mutating on World Reload:**

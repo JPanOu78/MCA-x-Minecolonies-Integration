@@ -59,6 +59,9 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
     @Unique
     private static final net.minecraft.resources.ResourceLocation MCAMINECOLONIES$AGE_SPEED_ID =
             net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mcaminecolonies", "age_speed_modifier");
+    @Unique
+    private static final net.minecraft.resources.ResourceLocation MCAMINECOLONIES$TRAIT_SPEED_ID =
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mcaminecolonies", "trait_speed_modifier");
 
     static {
         CDataManager.Builder<AbstractEntityCitizen> builder =
@@ -698,16 +701,32 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
         if (attr != null) {
             attr.removeModifier(VillagerLike.SPEED_ID);
             attr.removeModifier(MCAMINECOLONIES$AGE_SPEED_ID);
+            attr.removeModifier(MCAMINECOLONIES$TRAIT_SPEED_ID);
 
             AbstractEntityCitizen citizen = (AbstractEntityCitizen) (Object) this;
             CitizenMCAData data = CitizenMCAManager.getData(citizen);
-            if (data != null && citizen.isBaby()) {
-                com.mcaminecolonies.client.appearance.CitizenAgeState state = data.getAgeState(true);
-                float speedMultiplier = state.getSpeedMultiplier();
-                if (Math.abs(speedMultiplier - 1.0F) > 0.01F) {
+            if (data != null) {
+                if (citizen.isBaby()) {
+                    com.mcaminecolonies.client.appearance.CitizenAgeState state = data.getAgeState(true);
+                    float speedMultiplier = state.getSpeedMultiplier();
+                    if (Math.abs(speedMultiplier - 1.0F) > 0.01F) {
+                        attr.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                                MCAMINECOLONIES$AGE_SPEED_ID,
+                                speedMultiplier - 1.0F,
+                                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE
+                        ));
+                    }
+                }
+                if (data.hasTrait("mca:athletic") || data.hasTrait("athletic")) {
                     attr.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
-                            MCAMINECOLONIES$AGE_SPEED_ID,
-                            speedMultiplier - 1.0F,
+                            MCAMINECOLONIES$TRAIT_SPEED_ID,
+                            0.10D,
+                            net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE
+                    ));
+                } else if (data.hasTrait("mca:weak") || data.hasTrait("weak")) {
+                    attr.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                            MCAMINECOLONIES$TRAIT_SPEED_ID,
+                            -0.08D,
                             net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE
                     ));
                 }

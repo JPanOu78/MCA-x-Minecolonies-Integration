@@ -49,6 +49,7 @@ public class CitizenMCAData {
     private boolean isCustomized;
     private UUID followTarget;
     private String moveState = "MOVE";
+    private boolean inherited;
 
     public static final int DEFAULT_HAIR_COLOR = 0xFF4A2A18; // Natural Brown
     public static final int[] NATURAL_HAIR_COLORS = {
@@ -190,6 +191,7 @@ public class CitizenMCAData {
         tag.putInt("Hearts", this.hearts);
         tag.putInt("Fatigue", this.fatigue);
         tag.putBoolean("IsCustomized", this.isCustomized);
+        tag.putBoolean("Inherited", this.inherited);
         if (this.followTarget != null) tag.putUUID("FollowTarget", this.followTarget);
         if (this.moveState != null) tag.putString("MoveState", this.moveState);
         return tag;
@@ -248,6 +250,7 @@ public class CitizenMCAData {
         data.personality = tag.contains("Personality") ? tag.getString("Personality") : "friendly";
         data.hearts = tag.contains("Hearts") ? tag.getInt("Hearts") : 0;
         data.fatigue = tag.contains("Fatigue") ? tag.getInt("Fatigue") : 0;
+        data.inherited = tag.contains("Inherited") && tag.getBoolean("Inherited");
         data.isCustomized = tag.getBoolean("IsCustomized");
         if (tag.hasUUID("FollowTarget")) data.followTarget = tag.getUUID("FollowTarget");
         data.moveState = tag.contains("MoveState") ? tag.getString("MoveState") : "MOVE";
@@ -599,6 +602,21 @@ public class CitizenMCAData {
 
     public boolean hasTrait(String trait) {
         return this.traits.contains(trait);
+    }
+
+    public void setTraits(Set<String> newTraits) {
+        this.traits.clear();
+        if (newTraits != null) {
+            this.traits.addAll(newTraits);
+        }
+    }
+
+    public boolean isInherited() {
+        return inherited;
+    }
+
+    public void setInherited(boolean inherited) {
+        this.inherited = inherited;
     }
 }
 
