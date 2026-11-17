@@ -76,8 +76,13 @@ public abstract class EntityCitizenMixin {
             if (vl.getHair() != null && !vl.getHair().isEmpty()) {
                 tag.putString("Hair", vl.getHair());
             }
-            if (vl.getHairStyleId() != null && !vl.getHairStyleId().isEmpty()) {
-                tag.putString("HairStyle", vl.getHairStyleId());
+            String hStyle = vl.getHairStyleId();
+            if ((hStyle == null || hStyle.isEmpty()) && ent instanceof AbstractEntityCitizen cit) {
+                CitizenMCAData cData = CitizenMCAManager.getData(cit);
+                if (cData != null) hStyle = cData.getHairStyle();
+            }
+            if (hStyle != null && !hStyle.isEmpty()) {
+                tag.putString("HairStyle", hStyle);
             }
             tag.putInt("SkinColor", vl.getSkinDye());
             tag.putInt("SkinDye", vl.getSkinDye());
@@ -165,6 +170,18 @@ public abstract class EntityCitizenMixin {
                     if (tag.contains("Hair", 8)) {
                         String hair = tag.getString("Hair");
                         vl.setHair(hair);
+                    }
+                    if (tag.contains("HairStyle", 8)) {
+                        String style = tag.getString("HairStyle");
+                        data.setHairStyle(style);
+                        vl.setHairStyleId(style);
+                        try {
+                            net.conczin.mca.resources.data.skin.HairStyle hs = net.conczin.mca.resources.HairStyleList.getInstance().get(style);
+                            if (hs != null) {
+                                vl.setHairStyle(hs);
+                            }
+                        } catch (Exception ignored) {
+                        }
                     }
 
                     if (tag.contains("SkinDye", 99)) {

@@ -149,6 +149,24 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
                 }
             }
 
+            // Sync modern hairstyle & hair dye
+            if (data != null) {
+                String sId = data.resolveHairStyle(citizen.isFemale());
+                if (sId != null && !sId.isEmpty() && (this.getHairStyleId() == null || this.getHairStyleId().isEmpty())) {
+                    this.setHairStyleId(sId);
+                    try {
+                        HairStyle hs = HairStyleList.getInstance().get(sId);
+                        if (hs != null) {
+                            this.setHairStyle(hs);
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+                if (data.getHairColor() != 0 && data.getHairColor() != -16777216) {
+                    this.setHairDye(data.getHairColor());
+                }
+            }
+
             // 6. Natural dye defaults (-1 for eyes = derive from genetics, -16777216 for skin/hair = natural)
             if (this.getEyeDye() == 0) {
                 this.clearEyeDye();
@@ -257,6 +275,11 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             int hairDye = (data.getHairColor() != 0 && data.getHairColor() != -16777216) ? data.getHairColor() : this.getHairDye();
             tag.putInt("HairColor", hairDye);
             tag.putInt("HairDye", hairDye);
+            if (data.getHairStyle() != null) {
+                tag.putString("HairStyle", data.getHairStyle());
+            } else if (this.getHairStyleId() != null && !this.getHairStyleId().isEmpty()) {
+                tag.putString("HairStyle", this.getHairStyleId());
+            }
             tag.putInt("EyeDye", this.getEyeDye());
             tag.putInt("EyeColor", this.getEyeDye());
             tag.putInt("EyeColorLeft", this.getEyeLeftDye());
@@ -380,6 +403,7 @@ public abstract class AbstractEntityCitizenMixin extends PathfinderMob implement
             } else {
                 data.setCustomHair(null);
             }
+            data.setHairStyle(style);
         }
         if (tag.contains("HairBase", 8)) this.setLayeredHair(LayeredHair.Category.BASE, tag.getString("HairBase"));
         if (tag.contains("HairBangs", 8)) this.setLayeredHair(LayeredHair.Category.BANGS, tag.getString("HairBangs"));

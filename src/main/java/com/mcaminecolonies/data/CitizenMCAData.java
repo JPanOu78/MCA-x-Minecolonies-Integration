@@ -23,6 +23,7 @@ public class CitizenMCAData {
     private float hemoglobin = 0.15F;
     private String customClothes;
     private String customHair;
+    private String hairStyle;
     private String personality;
     private int hearts;
     private int fatigue;
@@ -81,6 +82,22 @@ public class CitizenMCAData {
         data.setHairColor(NATURAL_HAIR_COLORS[(seed2 / 13) % NATURAL_HAIR_COLORS.length]);
         data.setClothingIndex((seed2 / 11) % 10);
 
+        // Deterministic initial hairstyle selection from MCA HairStyleList
+        try {
+            net.conczin.mca.resources.HairStyleList hsl = net.conczin.mca.resources.HairStyleList.getInstance();
+            if (hsl != null) {
+                net.conczin.mca.entity.ai.relationship.Gender mcaGender = isFemale
+                        ? net.conczin.mca.entity.ai.relationship.Gender.FEMALE
+                        : net.conczin.mca.entity.ai.relationship.Gender.MALE;
+                java.util.List<net.conczin.mca.resources.data.skin.HairStyle> styles = hsl.getStyles(mcaGender);
+                if (styles != null && !styles.isEmpty()) {
+                    int sIdx = Math.abs((seed1 / 7) % styles.size());
+                    data.setHairStyle(styles.get(sIdx).getIdentifier());
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
         // Generate natural baseline melanin & hemoglobin
         float naturalMelanin = 0.12F + ((seed1 % 100) / 100.0F) * 0.15F; // range 0.12F to 0.27F
         float naturalHemoglobin = 0.10F + ((seed2 % 100) / 100.0F) * 0.12F; // range 0.10F to 0.22F
@@ -115,6 +132,7 @@ public class CitizenMCAData {
         tag.putFloat("Hemoglobin", this.hemoglobin);
         if (this.customClothes != null) tag.putString("CustomClothes", this.customClothes);
         if (this.customHair != null) tag.putString("CustomHair", this.customHair);
+        if (this.hairStyle != null) tag.putString("HairStyle", this.hairStyle);
         tag.putString("Personality", this.personality);
         tag.putInt("Hearts", this.hearts);
         tag.putInt("Fatigue", this.fatigue);
@@ -138,6 +156,7 @@ public class CitizenMCAData {
         data.clothingIndex = tag.getInt("ClothingIndex");
         if (tag.contains("CustomSkin")) data.customSkin = tag.getString("CustomSkin");
         if (tag.contains("SkinDye")) data.skinDye = tag.getInt("SkinDye");
+        if (tag.contains("HairStyle")) data.hairStyle = tag.getString("HairStyle");
         if (tag.contains("Melanin")) data.melanin = tag.getFloat("Melanin");
         if (tag.contains("Hemoglobin")) data.hemoglobin = tag.getFloat("Hemoglobin");
 
@@ -268,6 +287,36 @@ public class CitizenMCAData {
 
     public void setCustomHair(String customHair) {
         this.customHair = customHair;
+    }
+
+    public String getHairStyle() {
+        return hairStyle;
+    }
+
+    public void setHairStyle(String hairStyle) {
+        this.hairStyle = hairStyle;
+    }
+
+    public String resolveHairStyle(boolean isFemale) {
+        if (this.hairStyle != null && !this.hairStyle.isEmpty()) {
+            return this.hairStyle;
+        }
+        try {
+            net.conczin.mca.resources.HairStyleList hsl = net.conczin.mca.resources.HairStyleList.getInstance();
+            if (hsl != null) {
+                net.conczin.mca.entity.ai.relationship.Gender mcaGender = isFemale
+                        ? net.conczin.mca.entity.ai.relationship.Gender.FEMALE
+                        : net.conczin.mca.entity.ai.relationship.Gender.MALE;
+                java.util.List<net.conczin.mca.resources.data.skin.HairStyle> styles = hsl.getStyles(mcaGender);
+                if (styles != null && !styles.isEmpty()) {
+                    int sIdx = Math.abs(this.hairIndex % styles.size());
+                    this.hairStyle = styles.get(sIdx).getIdentifier();
+                    return this.hairStyle;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     public String getPersonality() {

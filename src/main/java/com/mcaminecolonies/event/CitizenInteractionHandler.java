@@ -123,6 +123,23 @@ public class CitizenInteractionHandler {
             data.setHairIndex(data.getHairIndex() + 1);
             data.setCustomHair(null);
             data.setCustomized(true);
+            try {
+                net.conczin.mca.resources.HairStyleList hsl = net.conczin.mca.resources.HairStyleList.getInstance();
+                if (hsl != null) {
+                    net.conczin.mca.entity.ai.relationship.Gender mcaGender = data.isFemale()
+                            ? net.conczin.mca.entity.ai.relationship.Gender.FEMALE
+                            : net.conczin.mca.entity.ai.relationship.Gender.MALE;
+                    java.util.List<net.conczin.mca.resources.data.skin.HairStyle> styles = hsl.getStyles(mcaGender);
+                    if (styles != null && !styles.isEmpty()) {
+                        net.conczin.mca.resources.data.skin.HairStyle next = styles.get(Math.abs(data.getHairIndex()) % styles.size());
+                        data.setHairStyle(next.getIdentifier());
+                        if (citizen instanceof net.conczin.mca.entity.VillagerLike<?> vl) {
+                            vl.setHairStyle(next);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            }
             if (citizen instanceof net.conczin.mca.entity.VillagerLike<?> vl) {
                 String genderDir = data.isFemale() ? "female" : "male";
                 vl.setHair("mca:skins/hair/" + genderDir + "/" + (data.getHairIndex() % 40) + ".png");

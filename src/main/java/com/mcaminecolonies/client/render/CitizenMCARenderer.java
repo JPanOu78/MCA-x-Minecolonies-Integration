@@ -244,19 +244,26 @@ public class CitizenMCARenderer {
         int hairColor = appearance.getHairColor();
         boolean renderedHair = false;
 
-        if (entity instanceof VillagerLike<?> vl) {
-            String styleId = vl.getHairStyleId();
-            HairStyle hairStyle = null;
-            if (styleId != null && !styleId.isBlank()) {
-                try {
-                    hairStyle = HairStyleList.getInstance().get(styleId);
-                } catch (Exception ignored) {
-                }
-            }
+        String styleId = appearance.getHairStyleId();
+        if ((styleId == null || styleId.isBlank()) && entity instanceof VillagerLike<?> vl) {
+            styleId = vl.getHairStyleId();
+        }
 
+        HairStyle hairStyle = null;
+        if (styleId != null && !styleId.isBlank()) {
+            try {
+                hairStyle = HairStyleList.getInstance().get(styleId);
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (hairStyle != null) {
             for (LayeredHair.Category category : LayeredHair.Category.RENDER_ORDER) {
-                String layerStr = vl.getLayeredHair(category);
-                if ((layerStr == null || layerStr.isBlank()) && hairStyle != null) {
+                String layerStr = null;
+                if (entity instanceof VillagerLike<?> vl) {
+                    layerStr = vl.getLayeredHair(category);
+                }
+                if (layerStr == null || layerStr.isBlank()) {
                     layerStr = hairStyle.layer(category);
                 }
                 if (layerStr != null && !layerStr.isBlank()) {

@@ -53,14 +53,18 @@ public class CitizenMCAManager {
         if (citizen instanceof IMCAEntityCitizen duck) {
             CompoundTag tag = duck.mcaminecolonies$getMCAData();
             if (tag != null && !tag.isEmpty()) {
-                return CitizenMCAData.fromNbt(tag, citizen.getUUID(), citizen.isFemale(), citizen.isBaby());
+                CitizenMCAData data = CitizenMCAData.fromNbt(tag, citizen.getUUID(), citizen.isFemale(), citizen.isBaby());
+                data.resolveHairStyle(citizen.isFemale());
+                return data;
             }
 
             // Check persistent colony citizen data if entity was recreated or reloaded
             if (citizen.getCitizenData() instanceof IMCACitizenData cdDuck && cdDuck.mcaminecolonies$hasMCAData()) {
                 CompoundTag colTag = cdDuck.mcaminecolonies$getMCAData().copy();
                 duck.mcaminecolonies$setMCAData(colTag);
-                return CitizenMCAData.fromNbt(colTag, citizen.getUUID(), citizen.isFemale(), citizen.isBaby());
+                CitizenMCAData data = CitizenMCAData.fromNbt(colTag, citizen.getUUID(), citizen.isFemale(), citizen.isBaby());
+                data.resolveHairStyle(citizen.isFemale());
+                return data;
             }
 
             // Check backup cache if citizen entity was recreated by MineColonies
@@ -74,7 +78,9 @@ public class CitizenMCAManager {
                     } catch (Exception ignored) {
                     }
                 }
-                return CitizenMCAData.fromNbt(backup, citizen.getUUID(), citizen.isFemale(), citizen.isBaby());
+                CitizenMCAData data = CitizenMCAData.fromNbt(backup, citizen.getUUID(), citizen.isFemale(), citizen.isBaby());
+                data.resolveHairStyle(citizen.isFemale());
+                return data;
             }
         }
 
@@ -94,7 +100,9 @@ public class CitizenMCAManager {
             }
         } catch (Exception ignored) {
         }
-        return CitizenMCAData.createDefault(citizen.getUUID(), colonyId, citizenId, citizen.isFemale(), citizen.isBaby());
+        CitizenMCAData def = CitizenMCAData.createDefault(citizen.getUUID(), colonyId, citizenId, citizen.isFemale(), citizen.isBaby());
+        def.resolveHairStyle(citizen.isFemale());
+        return def;
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

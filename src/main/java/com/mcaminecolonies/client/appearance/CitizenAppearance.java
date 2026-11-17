@@ -26,6 +26,7 @@ public class CitizenAppearance {
     private final String customSkin;
     private final String customClothes;
     private final String customHair;
+    private final String hairStyleId;
 
     public CitizenAppearance(AbstractEntityCitizen citizen) {
         CitizenMCAData data = CitizenMCAManager.getData(citizen);
@@ -89,11 +90,12 @@ public class CitizenAppearance {
         this.customSkin = (data.getCustomSkin() != null && !data.getCustomSkin().isEmpty()) ? data.getCustomSkin() : null;
         this.customClothes = (data.isCustomized() && data.getCustomClothes() != null && !data.getCustomClothes().isEmpty() && !data.getCustomClothes().contains("/baby/")) ? data.getCustomClothes() : null;
         this.customHair = (data.isCustomized() && data.getCustomHair() != null && !data.getCustomHair().isEmpty()) ? data.getCustomHair() : null;
+        this.hairStyleId = (data != null) ? data.resolveHairStyle(this.isFemale) : null;
 
         int resolvedHairColor = CitizenMCAData.DEFAULT_HAIR_COLOR;
         if (vHairDye != 0 && vHairDye != -16777216) {
             resolvedHairColor = (vHairDye & 0xFF000000) == 0 ? (0xFF000000 | vHairDye) : vHairDye;
-        } else if (data.getHairColor() != 0 && data.getHairColor() != -16777216 && data.getHairColor() != CitizenMCAData.DEFAULT_HAIR_COLOR) {
+        } else if (data != null && data.getHairColor() != 0 && data.getHairColor() != -16777216) {
             resolvedHairColor = (data.getHairColor() & 0xFF000000) == 0 ? (0xFF000000 | data.getHairColor()) : data.getHairColor();
         } else if (citizen instanceof VillagerLike<?> vl && vl.getGenetics() != null) {
             try {
@@ -104,8 +106,6 @@ public class CitizenAppearance {
             } catch (Exception ignored) {
                 resolvedHairColor = CitizenMCAData.DEFAULT_HAIR_COLOR;
             }
-        } else if (data.getHairColor() != 0) {
-            resolvedHairColor = (data.getHairColor() & 0xFF000000) == 0 ? (0xFF000000 | data.getHairColor()) : data.getHairColor();
         }
         this.hairColor = resolvedHairColor;
 
@@ -179,6 +179,10 @@ public class CitizenAppearance {
 
     public int getHairColor() {
         return hairColor;
+    }
+
+    public String getHairStyleId() {
+        return hairStyleId;
     }
 
     public int getSkinColor() {
